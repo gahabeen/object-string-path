@@ -1,6 +1,6 @@
 {
   "name": "object-string-path",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "main": "dist/object-string-path.js",
   "module": "dist/object-string-path.esm.js",
   "unpkg": "dist/object-string-path.iife.js",
