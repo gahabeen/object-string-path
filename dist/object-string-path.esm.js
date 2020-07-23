@@ -1,5 +1,5 @@
 /*!
-  * object-string-path v0.1.0
+  * object-string-path v0.1.1
   * (c) 2020 Gabin Desserprit
   * @license MIT
   */

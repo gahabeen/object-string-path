@@ -3,8 +3,11 @@
   * (c) 2020 Gabin Desserprit
   * @license MIT
   */
-var ObjectStringPath = (function (exports) {
-  'use strict';
+(function (global, factory) {
+  typeof exports === 'object' && typeof module !== 'undefined' ? factory(exports) :
+  typeof define === 'function' && define.amd ? define(['exports'], factory) :
+  (global = global || self, factory(global.ObjectStringPath = {}));
+}(this, (function (exports) { 'use strict';
 
   const OBJECT_KEY_PREFIX = /^\^/;
   const VARIABLE_PATH = /({.*?})/gim;
@@ -335,6 +338,6 @@ var ObjectStringPath = (function (exports) {
   exports.stringifyArray = stringifyArray;
   exports.unescape = unescape;
 
-  return exports;
+  Object.defineProperty(exports, '__esModule', { value: true });
 
-}({}));
+})));

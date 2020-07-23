@@ -61,9 +61,12 @@ function createEntry(
     config.output.file = pkg.unpkg
     config.output.name = exportName
   } else if (format === 'es') {
-    config.output.file = isBrowser ? pkg.browser : pkg.module
+    config.output.file = pkg.module
   } else if (format === 'cjs') {
     config.output.file = pkg.main
+  } else if (format === 'umd') {
+    config.output.name = exportName
+    config.output.file = pkg.browser
   }
 
   if (!external) {
@@ -87,8 +90,8 @@ function createEntry(
   return config
 }
 
-const builds = [createEntry({ format: 'cjs', isBrowser: true }), createEntry({ format: 'es' })]
+const builds = [createEntry({ format: 'cjs' }), createEntry({ format: 'umd', isBrowser: true })]
 
-if (pkg.unpkg) builds.push(createEntry({ format: 'iife' }), createEntry({ format: 'iife', minify: true }))
+if (pkg.unpkg) builds.push(createEntry({ format: 'iife' }), createEntry({ format: 'es' }))
 
 export default builds
