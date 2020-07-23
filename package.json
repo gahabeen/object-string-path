@@ -1,10 +1,10 @@
 {
   "name": "object-string-path",
   "version": "0.1.0",
-  "main": "dist/object-string-path.esm.js",
+  "main": "dist/object-string-path.js",
   "module": "dist/object-string-path.esm.js",
-  "unpkg": "dist/object-string-path.js",
-  "browser": "dist/object-string-path.esm.js",
+  "unpkg": "dist/object-string-path.iife.js",
+  "browser": "dist/object-string-path.iife.min.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/gahabeen/object-string-path"

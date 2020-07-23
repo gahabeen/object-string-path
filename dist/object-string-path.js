@@ -3,338 +3,335 @@
   * (c) 2020 Gabin Desserprit
   * @license MIT
   */
-var ObjectStringPath = (function (exports) {
-  'use strict';
+'use strict';
 
-  const OBJECT_KEY_PREFIX = /^\^/;
-  const VARIABLE_PATH = /({.*?})/gim;
-  const DOT_PLACEHOLDER = '<~~~>';
-  const OPEN_BRACKET_PLACEHOLDER = '<~OBRACK~>';
-  const CLOSED_BRACKET_PLACEHOLDER = '<~CBRACK~>';
-  const ARRAY_VALUE_SEPARATOR = '<~ARR~>';
+Object.defineProperty(exports, '__esModule', { value: true });
 
-  function isValidKey(key) {
-    return ['number', 'string', 'symbol'].includes(typeof key)
+const OBJECT_KEY_PREFIX = /^\^/;
+const VARIABLE_PATH = /({.*?})/gim;
+const DOT_PLACEHOLDER = '<~~~>';
+const OPEN_BRACKET_PLACEHOLDER = '<~OBRACK~>';
+const CLOSED_BRACKET_PLACEHOLDER = '<~CBRACK~>';
+const ARRAY_VALUE_SEPARATOR = '<~ARR~>';
+
+function isValidKey(key) {
+  return ['number', 'string', 'symbol'].includes(typeof key)
+}
+
+function isObject(o) {
+  let ctor, prot;
+
+  function _isObject(o) {
+    return Object.prototype.toString.call(o) === '[object Object]'
   }
 
-  function isObject(o) {
-    let ctor, prot;
+  if (_isObject(o) === false) return false
+  // If has modified constructor
+  ctor = o.constructor;
+  if (ctor === undefined) return true
+  // If has modified prototype
+  prot = ctor.prototype;
+  if (_isObject(prot) === false) return false
 
-    function _isObject(o) {
-      return Object.prototype.toString.call(o) === '[object Object]'
-    }
+  // Most likely a plain Object
+  return true
+}
 
-    if (_isObject(o) === false) return false
-    // If has modified constructor
-    ctor = o.constructor;
-    if (ctor === undefined) return true
-    // If has modified prototype
-    prot = ctor.prototype;
-    if (_isObject(prot) === false) return false
+function stringifyArray(arr) {
+  return ARRAY_VALUE_SEPARATOR + arr.join(ARRAY_VALUE_SEPARATOR) + ARRAY_VALUE_SEPARATOR
+}
 
-    // Most likely a plain Object
-    return true
-  }
+function isStringifiedArray(key) {
+  const matches = key.match(new RegExp(ARRAY_VALUE_SEPARATOR, 'gim'));
+  return matches && matches.length === 3
+}
 
-  function stringifyArray(arr) {
-    return ARRAY_VALUE_SEPARATOR + arr.join(ARRAY_VALUE_SEPARATOR) + ARRAY_VALUE_SEPARATOR
-  }
+function escape(text) {
+  return text.replace(/\./gim, DOT_PLACEHOLDER).replace(/\[/gim, OPEN_BRACKET_PLACEHOLDER).replace(/\]/gim, CLOSED_BRACKET_PLACEHOLDER)
+}
 
-  function isStringifiedArray(key) {
-    const matches = key.match(new RegExp(ARRAY_VALUE_SEPARATOR, 'gim'));
-    return matches && matches.length === 3
-  }
+function unescape(text) {
+  return text.replace(new RegExp(DOT_PLACEHOLDER, 'gim'), '.').replace(new RegExp(OPEN_BRACKET_PLACEHOLDER, 'gim'), '[').replace(new RegExp(CLOSED_BRACKET_PLACEHOLDER, 'gim'), ']')
+}
 
-  function escape(text) {
-    return text.replace(/\./gim, DOT_PLACEHOLDER).replace(/\[/gim, OPEN_BRACKET_PLACEHOLDER).replace(/\]/gim, CLOSED_BRACKET_PLACEHOLDER)
-  }
+function splitPath(path) {
+  return String(path)
+    .replace(VARIABLE_PATH, escape) // replaces dots by placeholder in variables paths
+    .replace(/\[/g, '.') // replaces opening [ by .
+    .replace(/^\./, '') // removes any dot at the beginning
+    .replace(/]/g, '') // removes closing ]
+    .split('.') // split by dots
+}
 
-  function unescape(text) {
-    return text.replace(new RegExp(DOT_PLACEHOLDER, 'gim'), '.').replace(new RegExp(OPEN_BRACKET_PLACEHOLDER, 'gim'), '[').replace(new RegExp(CLOSED_BRACKET_PLACEHOLDER, 'gim'), ']')
-  }
-
-  function splitPath(path) {
-    return String(path)
-      .replace(VARIABLE_PATH, escape) // replaces dots by placeholder in variables paths
-      .replace(/\[/g, '.') // replaces opening [ by .
-      .replace(/^\./, '') // removes any dot at the beginning
-      .replace(/]/g, '') // removes closing ]
-      .split('.') // split by dots
-  }
-
-  function resolveVariable(context) {
-    return (variable) => {
-      // console.log('resolveVariable', variable.slice(1, -1), context)
-      variable = variable.slice(1, -1);
-      if (variable.length > 0) {
-        const value = get(context, variable, context);
-        if (Array.isArray(value)) {
-          return stringifyArray(value)
-        } else {
-          return value
-        }
+function resolveVariable(context) {
+  return (variable) => {
+    // console.log('resolveVariable', variable.slice(1, -1), context)
+    variable = variable.slice(1, -1);
+    if (variable.length > 0) {
+      const value = get(context, variable, context);
+      if (Array.isArray(value)) {
+        return stringifyArray(value)
       } else {
-        return 'undefined'
+        return value
       }
+    } else {
+      return 'undefined'
     }
   }
+}
 
-  function resolveStep(steps, parent, context) {
-    parent = parent || {};
-    context = context || {};
-    let _step = steps[0];
-    const output = {
-      step: null,
-      _steps: steps.slice(1),
-      failed: false,
-    };
+function resolveStep(steps, parent, context) {
+  parent = parent || {};
+  context = context || {};
+  let _step = steps[0];
+  const output = {
+    step: null,
+    _steps: steps.slice(1),
+    failed: false,
+  };
 
-    if (['array', 'string', 'number'].includes(typeof _step)) {
-      _step = '' + _step.trim();
+  if (['array', 'string', 'number'].includes(typeof _step)) {
+    _step = '' + _step.trim();
 
-      // Makes sure dots are well set in potential variable paths
-      _step = unescape(_step);
+    // Makes sure dots are well set in potential variable paths
+    _step = unescape(_step);
 
-      // Clean step prefixes
-      _step = _step.replace(OBJECT_KEY_PREFIX, '');
+    // Clean step prefixes
+    _step = _step.replace(OBJECT_KEY_PREFIX, '');
 
-      // Resolve the different variables
-      _step = _step.replace(VARIABLE_PATH, resolveVariable(context));
+    // Resolve the different variables
+    _step = _step.replace(VARIABLE_PATH, resolveVariable(context));
 
-      // console.log('_step', _step, steps, parent, context)
-      if (_step.includes('undefined')) {
-        output.failed = true;
-      } // Check for equality condition,
-      else if (isStringifiedArray(_step) || _step.includes('=')) {
-        const keyValue = isStringifiedArray(_step)
-          ? _step.split(ARRAY_VALUE_SEPARATOR).slice(1, -1)
-          : _step
-              .split('=')
-              .filter(Boolean)
-              .map((text) => text.trim());
+    // console.log('_step', _step, steps, parent, context)
+    if (_step.includes('undefined')) {
+      output.failed = true;
+    } // Check for equality condition,
+    else if (isStringifiedArray(_step) || _step.includes('=')) {
+      const keyValue = isStringifiedArray(_step)
+        ? _step.split(ARRAY_VALUE_SEPARATOR).slice(1, -1)
+        : _step
+            .split('=')
+            .filter(Boolean)
+            .map((text) => text.trim());
 
-        // console.log('_step =======', keyValue)
-        if (keyValue.length === 2) {
-          const [key, value] = keyValue;
-          const index = getIndexByChildKeyValue(parent, key, value);
-          if (index !== undefined) {
-            output.step = index;
-          } else {
-            output.failed = true;
-            /* istanbul ignore next */
-            console.warn(`Couldn't not find any index for ${key}=${value}`);
-          }
+      // console.log('_step =======', keyValue)
+      if (keyValue.length === 2) {
+        const [key, value] = keyValue;
+        const index = getIndexByChildKeyValue(parent, key, value);
+        if (index !== undefined) {
+          output.step = index;
         } else {
           output.failed = true;
           /* istanbul ignore next */
-          console.warn(`Missing key or value to search for (keyValue:'${keyValue})`);
+          console.warn(`Couldn't not find any index for ${key}=${value}`);
         }
-      } else if (isValidKey(_step)) {
-        output.step = _step;
       } else {
+        output.failed = true;
         /* istanbul ignore next */
-        output.failed = true; // Not sure if this can hit tbh
+        console.warn(`Missing key or value to search for (keyValue:'${keyValue})`);
       }
+    } else if (isValidKey(_step)) {
+      output.step = _step;
     } else {
-      output.failed = true;
-      console.warn(`Propery couldn't be found (step: '${_step}' and type is: '${typeof _step}')`);
+      /* istanbul ignore next */
+      output.failed = true; // Not sure if this can hit tbh
     }
-
-    return output
+  } else {
+    output.failed = true;
+    console.warn(`Propery couldn't be found (step: '${_step}' and type is: '${typeof _step}')`);
   }
 
-  function getIndexByChildKeyValue(iterable, key, value) {
-    for (let prop of Object.keys(iterable)) {
-      if (isObject(iterable[prop]) && iterable[prop][key] == value) {
-        return prop
-      }
+  return output
+}
+
+function getIndexByChildKeyValue(iterable, key, value) {
+  for (let prop of Object.keys(iterable)) {
+    if (isObject(iterable[prop]) && iterable[prop][key] == value) {
+      return prop
     }
   }
+}
 
-  function hasProp(obj, key) {
-    if (isValidKey(key) && (isObject(obj) || Array.isArray(obj))) {
-      return key in obj
+function hasProp(obj, key) {
+  if (isValidKey(key) && (isObject(obj) || Array.isArray(obj))) {
+    return key in obj
+  } else {
+    return false
+  }
+}
+
+function getProp(obj, key) {
+  if (isValidKey(key) && (isObject(obj) || Array.isArray(obj))) {
+    return obj[key]
+  } else if (obj && key === undefined) {
+    return obj
+  } else {
+    return // error
+  }
+}
+
+function setProp(obj, key, value) {
+  if (isValidKey(key) && (isObject(obj) || Array.isArray(obj))) {
+    obj[key] = value;
+    return obj[key]
+  } else if (obj && key == undefined) {
+    if (isObject(value)) {
+      Object.assign(obj, value);
     } else {
-      return false
+      obj = value;
     }
+    return obj
+  } else {
+    console.log(`Couldn't not set ${key}`);
+    return
   }
+}
 
-  function getProp(obj, key) {
-    if (isValidKey(key) && (isObject(obj) || Array.isArray(obj))) {
-      return obj[key]
-    } else if (obj && key === undefined) {
-      return obj
-    } else {
-      return // error
-    }
-  }
+function makeHas(options) {
+  options = {
+    hasProp,
+    getProp,
+    getSteps: splitPath,
+    ...(options || {}),
+  };
 
-  function setProp(obj, key, value) {
-    if (isValidKey(key) && (isObject(obj) || Array.isArray(obj))) {
-      obj[key] = value;
-      return obj[key]
-    } else if (obj && key == undefined) {
-      if (isObject(value)) {
-        Object.assign(obj, value);
+  return function (obj, path, context) {
+    const steps = options.getSteps(path);
+    // console.log('path', path, steps)
+
+    function _has(_obj, _steps) {
+      // console.log("_has", _obj, _steps);
+      if (_steps.length > 0) {
+        const { step, _steps: __steps, failed } = resolveStep(_steps, _obj, context);
+        // console.log('step', step, '_steps', _steps, "failed", failed)
+        if (!failed) {
+          // console.log('options.hasProp(_obj, step)', options.hasProp(_obj, step), _obj, step)
+          return options.hasProp(_obj, step) && _has(options.getProp(_obj, step), __steps)
+        } else {
+          return false
+        }
       } else {
-        obj = value;
+        return true
       }
-      return obj
-    } else {
-      console.log(`Couldn't not set ${key}`);
-      return
     }
+
+    return _has(obj, steps)
   }
+}
 
-  function makeHas(options) {
-    options = {
-      hasProp,
-      getProp,
-      getSteps: splitPath,
-      ...(options || {}),
-    };
+/**
+ * forms.{$route.params.ref}
+ * forms.slug={$route.params.ref}.
+ */
 
-    return function (obj, path, context) {
-      const steps = options.getSteps(path);
-      // console.log('path', path, steps)
+function makeGet(options) {
+  options = {
+    getProp,
+    hasProp,
+    getSteps: splitPath,
+    ...(options || {}),
+  };
 
-      function _has(_obj, _steps) {
-        // console.log("_has", _obj, _steps);
-        if (_steps.length > 0) {
-          const { step, _steps: __steps, failed } = resolveStep(_steps, _obj, context);
-          // console.log('step', step, '_steps', _steps, "failed", failed)
-          if (!failed) {
-            // console.log('options.hasProp(_obj, step)', options.hasProp(_obj, step), _obj, step)
-            return options.hasProp(_obj, step) && _has(options.getProp(_obj, step), __steps)
-          } else {
-            return false
-          }
+  return function (obj, path, context) {
+    const steps = options.getSteps(path);
+
+    function _get(_obj, _steps) {
+      if (_steps.length > 0) {
+        const { step, _steps: __steps, failed } = resolveStep(_steps, _obj, context);
+
+        if (!failed && options.hasProp(_obj, step)) {
+          return _get(options.getProp(_obj, step), __steps)
         } else {
-          return true
+          return
         }
+      } else {
+        return _obj
       }
-
-      return _has(obj, steps)
     }
+
+    return _get(obj, steps)
   }
+}
 
-  /**
-   * forms.{$route.params.ref}
-   * forms.slug={$route.params.ref}.
-   */
+function makeSet(options) {
+  options = {
+    setProp,
+    getProp,
+    hasProp,
+    getSteps: splitPath,
+    ...(options || {}),
+  };
 
-  function makeGet(options) {
-    options = {
-      getProp,
-      hasProp,
-      getSteps: splitPath,
-      ...(options || {}),
-    };
+  return function (obj, path, value, context) {
+    const steps = options.getSteps(path);
 
-    return function (obj, path, context) {
-      const steps = options.getSteps(path);
-
-      function _get(_obj, _steps) {
-        if (_steps.length > 0) {
-          const { step, _steps: __steps, failed } = resolveStep(_steps, _obj, context);
-
-          if (!failed && options.hasProp(_obj, step)) {
-            return _get(options.getProp(_obj, step), __steps)
-          } else {
-            return
-          }
-        } else {
-          return _obj
-        }
-      }
-
-      return _get(obj, steps)
-    }
-  }
-
-  function makeSet(options) {
-    options = {
-      setProp,
-      getProp,
-      hasProp,
-      getSteps: splitPath,
-      ...(options || {}),
-    };
-
-    return function (obj, path, value, context) {
-      const steps = options.getSteps(path);
-
-      const _set = (_obj, _steps, _value) => {
-        // console.log("_set", _obj, _steps, _value);
-        if (_steps.length > 0) {
-          const { step, _steps: __steps, failed } = resolveStep(_steps, _obj, context);
-          // console.log("resolveStep", step, __steps, failed);
-          if (failed) {
-            return
-          } else if (__steps.length > 0) {
-            const nextObj = options.getProp(_obj, step);
-            const { step: nextStep } = resolveStep(__steps, nextObj, context);
-            if (Number.isInteger(+nextStep) && !isObject(nextObj)) {
-              // Sub prop exists and is an array
-              if (options.hasProp(_obj, step) && Array.isArray(nextObj)) {
-                _set(nextObj, __steps, _value);
-              }
-              // Sub prop doesn't exists and should an array
-              else {
-                _set(options.setProp(_obj, step, []), __steps, _value);
-              }
+    const _set = (_obj, _steps, _value) => {
+      // console.log("_set", _obj, _steps, _value);
+      if (_steps.length > 0) {
+        const { step, _steps: __steps, failed } = resolveStep(_steps, _obj, context);
+        // console.log("resolveStep", step, __steps, failed);
+        if (failed) {
+          return
+        } else if (__steps.length > 0) {
+          const nextObj = options.getProp(_obj, step);
+          const { step: nextStep } = resolveStep(__steps, nextObj, context);
+          if (Number.isInteger(+nextStep) && !isObject(nextObj)) {
+            // Sub prop exists and is an array
+            if (options.hasProp(_obj, step) && Array.isArray(nextObj)) {
+              _set(nextObj, __steps, _value);
             }
-            // Sub prop exists and is an object
-            else if (options.hasProp(_obj, step) && isObject(nextObj)) {
-              // console.log("setting", _obj, step, options.getProp(_obj, step), __steps);
-              _set(options.getProp(_obj, step), __steps, _value);
-            }
-            // Sub prop doesn't exists and should be an object
+            // Sub prop doesn't exists and should an array
             else {
-              _set(options.setProp(_obj, step, {}), __steps, _value);
+              _set(options.setProp(_obj, step, []), __steps, _value);
             }
-          } else {
-            options.setProp(_obj, step, _value);
+          }
+          // Sub prop exists and is an object
+          else if (options.hasProp(_obj, step) && isObject(nextObj)) {
+            // console.log("setting", _obj, step, options.getProp(_obj, step), __steps);
+            _set(options.getProp(_obj, step), __steps, _value);
+          }
+          // Sub prop doesn't exists and should be an object
+          else {
+            _set(options.setProp(_obj, step, {}), __steps, _value);
           }
         } else {
-          options.setProp(_obj, undefined, _value);
+          options.setProp(_obj, step, _value);
         }
-      };
+      } else {
+        options.setProp(_obj, undefined, _value);
+      }
+    };
 
-      _set(obj, steps, value);
-    }
+    _set(obj, steps, value);
   }
+}
 
-  const has = makeHas();
-  const get = makeGet();
-  const set = makeSet();
+const has = makeHas();
+const get = makeGet();
+const set = makeSet();
 
-  exports.ARRAY_VALUE_SEPARATOR = ARRAY_VALUE_SEPARATOR;
-  exports.CLOSED_BRACKET_PLACEHOLDER = CLOSED_BRACKET_PLACEHOLDER;
-  exports.DOT_PLACEHOLDER = DOT_PLACEHOLDER;
-  exports.OBJECT_KEY_PREFIX = OBJECT_KEY_PREFIX;
-  exports.OPEN_BRACKET_PLACEHOLDER = OPEN_BRACKET_PLACEHOLDER;
-  exports.VARIABLE_PATH = VARIABLE_PATH;
-  exports.escape = escape;
-  exports.get = get;
-  exports.getIndexByChildKeyValue = getIndexByChildKeyValue;
-  exports.getProp = getProp;
-  exports.has = has;
-  exports.hasProp = hasProp;
-  exports.isObject = isObject;
-  exports.isStringifiedArray = isStringifiedArray;
-  exports.isValidKey = isValidKey;
-  exports.makeGet = makeGet;
-  exports.makeHas = makeHas;
-  exports.makeSet = makeSet;
-  exports.resolveStep = resolveStep;
-  exports.resolveVariable = resolveVariable;
-  exports.set = set;
-  exports.setProp = setProp;
-  exports.splitPath = splitPath;
-  exports.stringifyArray = stringifyArray;
-  exports.unescape = unescape;
-
-  return exports;
-
-}({}));
+exports.ARRAY_VALUE_SEPARATOR = ARRAY_VALUE_SEPARATOR;
+exports.CLOSED_BRACKET_PLACEHOLDER = CLOSED_BRACKET_PLACEHOLDER;
+exports.DOT_PLACEHOLDER = DOT_PLACEHOLDER;
+exports.OBJECT_KEY_PREFIX = OBJECT_KEY_PREFIX;
+exports.OPEN_BRACKET_PLACEHOLDER = OPEN_BRACKET_PLACEHOLDER;
+exports.VARIABLE_PATH = VARIABLE_PATH;
+exports.escape = escape;
+exports.get = get;
+exports.getIndexByChildKeyValue = getIndexByChildKeyValue;
+exports.getProp = getProp;
+exports.has = has;
+exports.hasProp = hasProp;
+exports.isObject = isObject;
+exports.isStringifiedArray = isStringifiedArray;
+exports.isValidKey = isValidKey;
+exports.makeGet = makeGet;
+exports.makeHas = makeHas;
+exports.makeSet = makeSet;
+exports.resolveStep = resolveStep;
+exports.resolveVariable = resolveVariable;
+exports.set = set;
+exports.setProp = setProp;
+exports.splitPath = splitPath;
+exports.stringifyArray = stringifyArray;
+exports.unescape = unescape;

@@ -87,8 +87,8 @@ function createEntry(
   return config
 }
 
-const builds = [createEntry({ format: 'es', isBrowser: true })]
+const builds = [createEntry({ format: 'cjs', isBrowser: true }), createEntry({ format: 'es' })]
 
-if (pkg.unpkg) builds.push(createEntry({ format: 'iife' }), createEntry({ format: 'iife', minify: true }), createEntry({ format: 'es', isBrowser: true, minify: true }))
+if (pkg.unpkg) builds.push(createEntry({ format: 'iife' }), createEntry({ format: 'iife', minify: true }))
 
 export default builds
