@@ -168,7 +168,7 @@ export function makeGet(options) {
     getProp,
     hasProp,
     getSteps: splitPath,
-    afterGetSteps: steps => steps
+    afterGetSteps: steps => steps,
     ...(options || {}),
   }
 

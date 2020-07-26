@@ -1,5 +1,5 @@
 /*!
-  * object-string-path v0.1.1
+  * object-string-path v0.1.2
   * (c) 2020 Gabin Desserprit
   * @license MIT
   */
@@ -188,11 +188,12 @@ function makeHas(options) {
     hasProp,
     getProp,
     getSteps: splitPath,
+    afterGetSteps: steps => steps,
     ...(options || {}),
   };
 
   return function (obj, path, context) {
-    const steps = options.getSteps(path);
+    const steps = afterGetSteps(options.getSteps(path));
     // console.log('path', path, steps)
 
     function _has(_obj, _steps) {
@@ -225,11 +226,12 @@ function makeGet(options) {
     getProp,
     hasProp,
     getSteps: splitPath,
+    afterGetSteps: steps => steps,
     ...(options || {}),
   };
 
   return function (obj, path, context) {
-    const steps = options.getSteps(path);
+    const steps = afterGetSteps(options.getSteps(path));
 
     function _get(_obj, _steps) {
       if (_steps.length > 0) {
@@ -255,11 +257,12 @@ function makeSet(options) {
     getProp,
     hasProp,
     getSteps: splitPath,
+    afterGetSteps: steps => steps,
     ...(options || {}),
   };
 
   return function (obj, path, value, context) {
-    const steps = options.getSteps(path);
+    const steps = afterGetSteps(options.getSteps(path));
 
     const _set = (_obj, _steps, _value) => {
       // console.log("_set", _obj, _steps, _value);
