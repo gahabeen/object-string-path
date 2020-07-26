@@ -135,7 +135,7 @@ export function makeHas(options) {
   }
 
   return function (obj, path, context) {
-    const steps = afterGetSteps(options.getSteps(path))
+    const steps = options.afterGetSteps(options.getSteps(path))
     // console.log('path', path, steps)
 
     function _has(_obj, _steps) {
@@ -173,7 +173,7 @@ export function makeGet(options) {
   }
 
   return function (obj, path, context) {
-    const steps = afterGetSteps(options.getSteps(path))
+    const steps = options.afterGetSteps(options.getSteps(path))
 
     function _get(_obj, _steps) {
       if (_steps.length > 0) {
@@ -204,7 +204,7 @@ export function makeSet(options) {
   }
 
   return function (obj, path, value, context) {
-    const steps = afterGetSteps(options.getSteps(path))
+    const steps = options.afterGetSteps(options.getSteps(path))
 
     const _set = (_obj, _steps, _value) => {
       // console.log("_set", _obj, _steps, _value);
