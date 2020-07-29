@@ -43,6 +43,7 @@ export function unescape(text) {
 export function splitPath(path) {
   return String(path)
     .replace(VARIABLE_PATH, escape) // replaces dots by placeholder in variables paths
+    .replace(/\.\[/g, '.') // replaces opening .[ by . (prevents faulty paths which would have a dot + brackets)
     .replace(/\[/g, '.') // replaces opening [ by .
     .replace(/^\./, '') // removes any dot at the beginning
     .replace(/]/g, '') // removes closing ]
