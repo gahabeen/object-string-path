@@ -217,4 +217,9 @@ describe('get(<obj>, <path>, <context?>)', () => {
     expect(value).toEqual(obj['1'].comments[1])
   })
 
+  it('should resolve a simple path with faulty brackets', () => {
+    const obj = { profile: { name: 'Teddy' } }
+    const name = get(obj, 'profile.[name]')
+    expect(name).toEqual(obj.profile.name)
+  })
 })

@@ -216,4 +216,10 @@ describe('set(<obj>, <path>, <value>, <context?>)', () => {
     })
     expect(obj['1'].comments[1].comment).toEqual('Nice comment')
   })
+
+  it('should set a simple path value with faulty brackets', () => {
+    const obj = { profile: { name: 'Teddy' } }
+    set(obj, 'profile.[name]', 'Baloo')
+    expect(obj.profile.name).toBe('Baloo')
+  })
 })

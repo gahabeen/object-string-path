@@ -149,7 +149,6 @@ describe('has(<obj>, <path>, <context?>)', () => {
     expect(valid).toEqual(true)
   })
 
-  
   /** Computed with variable keys */
 
   it('should check a 2-dimensions: object into keyed-object, computed + 1 variable key', () => {
@@ -216,5 +215,10 @@ describe('has(<obj>, <path>, <context?>)', () => {
       commentRef: ['id', 2],
     })
     expect(valid).toEqual(true)
+  })
+
+  it('should check a simple path with faulty brackets', () => {
+    const obj = { profile: { name: 'Teddy' } }
+    expect(has(obj, 'profile.[name]')).toBe(true)
   })
 })
