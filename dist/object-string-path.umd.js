@@ -1,5 +1,5 @@
 /*!
-  * object-string-path v0.1.2
+  * object-string-path v0.1.23
   * (c) 2020 Gabin Desserprit
   * @license MIT
   */
@@ -59,6 +59,7 @@
   function splitPath(path) {
     return String(path)
       .replace(VARIABLE_PATH, escape) // replaces dots by placeholder in variables paths
+      .replace(/\.\[/g, '.') // replaces opening .[ by . (prevents faulty paths which would have a dot + brackets)
       .replace(/\[/g, '.') // replaces opening [ by .
       .replace(/^\./, '') // removes any dot at the beginning
       .replace(/]/g, '') // removes closing ]
@@ -199,7 +200,7 @@
     };
 
     return function (obj, path, context) {
-      const steps = afterGetSteps(options.getSteps(path));
+      const steps = options.afterGetSteps(options.getSteps(path));
       // console.log('path', path, steps)
 
       function _has(_obj, _steps) {
@@ -237,7 +238,7 @@
     };
 
     return function (obj, path, context) {
-      const steps = afterGetSteps(options.getSteps(path));
+      const steps = options.afterGetSteps(options.getSteps(path));
 
       function _get(_obj, _steps) {
         if (_steps.length > 0) {
@@ -268,7 +269,7 @@
     };
 
     return function (obj, path, value, context) {
-      const steps = afterGetSteps(options.getSteps(path));
+      const steps = options.afterGetSteps(options.getSteps(path));
 
       const _set = (_obj, _steps, _value) => {
         // console.log("_set", _obj, _steps, _value);
