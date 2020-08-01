@@ -3,7 +3,6 @@ import { splitPath, isObject, isValidKey, unescape, isStringifiedArray, stringif
 
 export function resolveVariable(context) {
   return (variable) => {
-    // console.log('resolveVariable', variable.slice(1, -1), context)
     variable = variable.slice(1, -1)
     if (variable.length > 0) {
       const value = get(context, variable, context)
@@ -16,6 +15,15 @@ export function resolveVariable(context) {
       return 'undefined'
     }
   }
+}
+
+export function resolveContext(steps, context) {
+  const path = steps.join('.')
+  const resolvedContext = {}
+  for (let match of path.match(VARIABLE_PATH) || []) {
+    resolvedContext[match] = resolveVariable(context)(unescape(match))
+  }
+  return resolvedContext
 }
 
 export function resolveStep(steps, parent, context) {
@@ -130,7 +138,7 @@ export function makeHas(options) {
     hasProp,
     getProp,
     getSteps: splitPath,
-    afterGetSteps: steps => steps,
+    afterGetSteps: (steps) => steps,
     ...(options || {}),
   }
 
@@ -168,19 +176,20 @@ export function makeGet(options) {
     getProp,
     hasProp,
     getSteps: splitPath,
-    afterGetSteps: steps => steps,
+    afterGetSteps: (steps) => steps,
+    proxy: (obj, steps, context, resolvedContext, orGet) => orGet(obj, steps, context),
     ...(options || {}),
   }
 
   return function (obj, path, context) {
     const steps = options.afterGetSteps(options.getSteps(path))
 
-    function _get(_obj, _steps) {
+    function _get(_obj, _steps, _context) {
       if (_steps.length > 0) {
-        const { step, _steps: __steps, failed } = resolveStep(_steps, _obj, context)
+        const { step, _steps: __steps, failed } = resolveStep(_steps, _obj, _context)
 
         if (!failed && options.hasProp(_obj, step)) {
-          return _get(options.getProp(_obj, step), __steps)
+          return _get(options.getProp(_obj, step), __steps, _context)
         } else {
           return
         }
@@ -189,7 +198,8 @@ export function makeGet(options) {
       }
     }
 
-    return _get(obj, steps)
+    const resolvedContext = resolveContext(steps, context)
+    return options.proxy(obj, steps, context, resolvedContext, _get)
   }
 }
 
@@ -199,7 +209,7 @@ export function makeSet(options) {
     getProp,
     hasProp,
     getSteps: splitPath,
-    afterGetSteps: steps => steps,
+    afterGetSteps: (steps) => steps,
     ...(options || {}),
   }
 
