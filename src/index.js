@@ -276,6 +276,7 @@ export function makeRemove(options) {
     get: null,
     getProp,
     hasProp,
+    removeProp,
     getSteps: splitPath,
     afterGetSteps: (steps) => steps,
     ...(options || {}),
@@ -292,7 +293,7 @@ export function makeRemove(options) {
 
     const { step, failed } = resolveStep(keyToDelete, parent, context)
     if (!failed && options.hasProp(parent, step)) {
-      return removeProp(obj, parent, parentPath, step, context)
+      return options.removeProp(obj, parent, parentPath, step, context)
     } else {
       return false
     }
