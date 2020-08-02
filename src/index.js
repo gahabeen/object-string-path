@@ -257,8 +257,51 @@ export function makeSet(options) {
   }
 }
 
+export function makeRemove(options) {
+  options = {
+    get,
+    set,
+    getProp,
+    hasProp,
+    getSteps: splitPath,
+    afterGetSteps: (steps) => steps,
+    afterRemoved: (parent, parentPath, obj, key, context) => {},
+    ...(options || {}),
+  }
+
+  return function (obj, path, context) {
+    const steps = options.afterGetSteps(options.getSteps(path))
+
+    const _get = options.get || makeGet({ getProp, hasProp, getSteps, afterGetSteps })
+
+    const keyToDelete = steps.slice(-1)
+    const parentPath = steps.slice(0, -1).join('.')
+    const parent = steps.length > 1 ? _get(obj, parentPath, context) : obj
+
+    const { step, failed } = resolveStep(keyToDelete, parent, context)
+    if (!failed && options.hasProp(parent, step)) {
+      if (Array.isArray(obj)) {
+        parent.splice(+step, 1)
+        return true
+      } else if (isObject(parent)) {
+        delete parent[step]
+        options.afterRemoved(parent, parentPath, obj, step, context)
+        return true
+      } else {
+        // nothing can be done?
+        // Handle more types
+        return false
+      }
+    } else {
+      return false
+    }
+  }
+}
+
 export const has = makeHas()
 export const get = makeGet()
 export const set = makeSet()
+export const remove = makeRemove()
+
 export * from './utils'
 export * from './consts'
