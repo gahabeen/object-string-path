@@ -1,5 +1,5 @@
 /*!
-  * object-string-path v0.1.25
+  * object-string-path v0.1.27
   * (c) 2020 Gabin Desserprit
   * @license MIT
   */
@@ -57,6 +57,7 @@
   }
 
   function splitPath(path) {
+    if (Array.isArray(path)) path = path.join('.');
     return String(path)
       .replace(VARIABLE_PATH, escape) // replaces dots by placeholder in variables paths
       .replace(/\.\[/g, '.') // replaces opening .[ by . (prevents faulty paths which would have a dot + brackets)
@@ -198,6 +199,20 @@
     }
   }
 
+  function removeProp(obj, parent, parentPath, key, context) {
+    if (Array.isArray(obj)) {
+      parent.splice(+key, 1);
+      return true
+    } else if (isObject(parent)) {
+      delete parent[key];
+      return true
+    } else {
+      // nothing can be done?
+      // Handle more types
+      return false
+    }
+  }
+
   function makeHas(options) {
     options = {
       hasProp,
@@ -324,20 +339,18 @@
 
   function makeRemove(options) {
     options = {
-      get,
-      set,
+      get: null,
       getProp,
       hasProp,
       getSteps: splitPath,
       afterGetSteps: (steps) => steps,
-      afterRemoved: (parent, parentPath, obj, key, context) => {},
       ...(options || {}),
     };
 
     return function (obj, path, context) {
       const steps = options.afterGetSteps(options.getSteps(path));
 
-      const _get = options.get || makeGet({ getProp, hasProp, getSteps, afterGetSteps });
+      const _get = options.get || makeGet({ getProp: options.getProp, hasProp: options.hasProp, getSteps: options.getSteps });
 
       const keyToDelete = steps.slice(-1);
       const parentPath = steps.slice(0, -1).join('.');
@@ -345,18 +358,7 @@
 
       const { step, failed } = resolveStep(keyToDelete, parent, context);
       if (!failed && options.hasProp(parent, step)) {
-        if (Array.isArray(obj)) {
-          parent.splice(+step, 1);
-          return true
-        } else if (isObject(parent)) {
-          delete parent[step];
-          options.afterRemoved(parent, parentPath, obj, step, context);
-          return true
-        } else {
-          // nothing can be done?
-          // Handle more types
-          return false
-        }
+        return removeProp(obj, parent, parentPath, step)
       } else {
         return false
       }
@@ -388,6 +390,7 @@
   exports.makeRemove = makeRemove;
   exports.makeSet = makeSet;
   exports.remove = remove;
+  exports.removeProp = removeProp;
   exports.resolveContext = resolveContext;
   exports.resolveStep = resolveStep;
   exports.resolveVariable = resolveVariable;
