@@ -1,5 +1,5 @@
 /*!
-  * object-string-path v0.1.23
+  * object-string-path v0.1.25
   * (c) 2020 Gabin Desserprit
   * @license MIT
   */
@@ -66,7 +66,6 @@ function splitPath(path) {
 
 function resolveVariable(context) {
   return (variable) => {
-    // console.log('resolveVariable', variable.slice(1, -1), context)
     variable = variable.slice(1, -1);
     if (variable.length > 0) {
       const value = get(context, variable, context);
@@ -79,6 +78,15 @@ function resolveVariable(context) {
       return 'undefined'
     }
   }
+}
+
+function resolveContext(steps, context) {
+  const path = steps.join('.');
+  const resolvedContext = {};
+  for (let match of path.match(VARIABLE_PATH) || []) {
+    resolvedContext[match] = resolveVariable(context)(unescape(match));
+  }
+  return resolvedContext
 }
 
 function resolveStep(steps, parent, context) {
@@ -193,7 +201,7 @@ function makeHas(options) {
     hasProp,
     getProp,
     getSteps: splitPath,
-    afterGetSteps: steps => steps,
+    afterGetSteps: (steps) => steps,
     ...(options || {}),
   };
 
@@ -231,19 +239,20 @@ function makeGet(options) {
     getProp,
     hasProp,
     getSteps: splitPath,
-    afterGetSteps: steps => steps,
+    afterGetSteps: (steps) => steps,
+    proxy: (obj, steps, context, resolvedContext, orGet) => orGet(obj, steps, context),
     ...(options || {}),
   };
 
   return function (obj, path, context) {
     const steps = options.afterGetSteps(options.getSteps(path));
 
-    function _get(_obj, _steps) {
+    function _get(_obj, _steps, _context) {
       if (_steps.length > 0) {
-        const { step, _steps: __steps, failed } = resolveStep(_steps, _obj, context);
+        const { step, _steps: __steps, failed } = resolveStep(_steps, _obj, _context);
 
         if (!failed && options.hasProp(_obj, step)) {
-          return _get(options.getProp(_obj, step), __steps)
+          return _get(options.getProp(_obj, step), __steps, _context)
         } else {
           return
         }
@@ -252,7 +261,8 @@ function makeGet(options) {
       }
     }
 
-    return _get(obj, steps)
+    const resolvedContext = resolveContext(steps, context);
+    return options.proxy(obj, steps, context, resolvedContext, _get)
   }
 }
 
@@ -262,7 +272,7 @@ function makeSet(options) {
     getProp,
     hasProp,
     getSteps: splitPath,
-    afterGetSteps: steps => steps,
+    afterGetSteps: (steps) => steps,
     ...(options || {}),
   };
 
@@ -310,9 +320,51 @@ function makeSet(options) {
   }
 }
 
+function makeRemove(options) {
+  options = {
+    get,
+    set,
+    getProp,
+    hasProp,
+    getSteps: splitPath,
+    afterGetSteps: (steps) => steps,
+    afterRemoved: (parent, parentPath, obj, key, context) => {},
+    ...(options || {}),
+  };
+
+  return function (obj, path, context) {
+    const steps = options.afterGetSteps(options.getSteps(path));
+
+    const _get = options.get || makeGet({ getProp, hasProp, getSteps, afterGetSteps });
+
+    const keyToDelete = steps.slice(-1);
+    const parentPath = steps.slice(0, -1).join('.');
+    const parent = steps.length > 1 ? _get(obj, parentPath, context) : obj;
+
+    const { step, failed } = resolveStep(keyToDelete, parent, context);
+    if (!failed && options.hasProp(parent, step)) {
+      if (Array.isArray(obj)) {
+        parent.splice(+step, 1);
+        return true
+      } else if (isObject(parent)) {
+        delete parent[step];
+        options.afterRemoved(parent, parentPath, obj, step, context);
+        return true
+      } else {
+        // nothing can be done?
+        // Handle more types
+        return false
+      }
+    } else {
+      return false
+    }
+  }
+}
+
 const has = makeHas();
 const get = makeGet();
 const set = makeSet();
+const remove = makeRemove();
 
 exports.ARRAY_VALUE_SEPARATOR = ARRAY_VALUE_SEPARATOR;
 exports.CLOSED_BRACKET_PLACEHOLDER = CLOSED_BRACKET_PLACEHOLDER;
@@ -331,7 +383,10 @@ exports.isStringifiedArray = isStringifiedArray;
 exports.isValidKey = isValidKey;
 exports.makeGet = makeGet;
 exports.makeHas = makeHas;
+exports.makeRemove = makeRemove;
 exports.makeSet = makeSet;
+exports.remove = remove;
+exports.resolveContext = resolveContext;
 exports.resolveStep = resolveStep;
 exports.resolveVariable = resolveVariable;
 exports.set = set;
