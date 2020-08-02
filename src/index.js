@@ -133,6 +133,20 @@ export function setProp(obj, key, value) {
   }
 }
 
+export function removeProp(obj, parent, parentPath, key, context) {
+  if (Array.isArray(obj)) {
+    parent.splice(+key, 1)
+    return true
+  } else if (isObject(parent)) {
+    delete parent[key]
+    return true
+  } else {
+    // nothing can be done?
+    // Handle more types
+    return false
+  }
+}
+
 export function makeHas(options) {
   options = {
     hasProp,
@@ -259,20 +273,18 @@ export function makeSet(options) {
 
 export function makeRemove(options) {
   options = {
-    get,
-    set,
+    get: null,
     getProp,
     hasProp,
     getSteps: splitPath,
     afterGetSteps: (steps) => steps,
-    afterRemoved: (parent, parentPath, obj, key, context) => {},
     ...(options || {}),
   }
 
   return function (obj, path, context) {
     const steps = options.afterGetSteps(options.getSteps(path))
 
-    const _get = options.get || makeGet({ getProp, hasProp, getSteps, afterGetSteps })
+    const _get = options.get || makeGet({ getProp: options.getProp, hasProp: options.hasProp, getSteps: options.getSteps })
 
     const keyToDelete = steps.slice(-1)
     const parentPath = steps.slice(0, -1).join('.')
@@ -280,18 +292,7 @@ export function makeRemove(options) {
 
     const { step, failed } = resolveStep(keyToDelete, parent, context)
     if (!failed && options.hasProp(parent, step)) {
-      if (Array.isArray(obj)) {
-        parent.splice(+step, 1)
-        return true
-      } else if (isObject(parent)) {
-        delete parent[step]
-        options.afterRemoved(parent, parentPath, obj, step, context)
-        return true
-      } else {
-        // nothing can be done?
-        // Handle more types
-        return false
-      }
+      return removeProp(obj, parent, parentPath, step, context)
     } else {
       return false
     }
