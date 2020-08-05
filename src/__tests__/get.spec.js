@@ -286,7 +286,7 @@ describe('get(<obj>, <path>, <context?>)', () => {
   })
 
   it('should get map value in array, spread operator', () => {
-    const obj = { products: [{ name: 'Berries' }, { name: 'Marmelade' }] }
+    const obj = { products: { '1': { name: 'Berries' }, '2': { name: 'Marmelade' } } }
     const value = get(obj, 'products..name')
     expect(value).toEqual(Object.values(obj.products).map((p) => p.name))
   })

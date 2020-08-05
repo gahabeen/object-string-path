@@ -321,7 +321,7 @@ describe('has(<obj>, <path>, <context?>)', () => {
   })
 
   it('should check every value in array, spread operator', () => {
-    const obj = { products: [{ name: 'Berries' }, { name: 'Marmelade' }] }
+    const obj = { products: { '1': { name: 'Berries' }, '2': { name: 'Marmelade' } } }
     const valid = has(obj, 'products..name')
     expect(valid).toEqual(Object.values(obj.products).every((p) => 'name' in p))
   })
