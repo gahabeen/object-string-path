@@ -1,5 +1,5 @@
 /*!
-  * object-string-path v0.1.27
+  * object-string-path v0.1.30
   * (c) 2020 Gabin Desserprit
   * @license MIT
   */
@@ -342,6 +342,7 @@
       get: null,
       getProp,
       hasProp,
+      removeProp,
       getSteps: splitPath,
       afterGetSteps: (steps) => steps,
       ...(options || {}),
@@ -358,7 +359,7 @@
 
       const { step, failed } = resolveStep(keyToDelete, parent, context);
       if (!failed && options.hasProp(parent, step)) {
-        return removeProp(obj, parent, parentPath, step)
+        return options.removeProp(obj, parent, parentPath, step, context)
       } else {
         return false
       }

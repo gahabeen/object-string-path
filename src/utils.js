@@ -1,4 +1,4 @@
-import { DOT_PLACEHOLDER, VARIABLE_PATH, OPEN_BRACKET_PLACEHOLDER, CLOSED_BRACKET_PLACEHOLDER, ARRAY_VALUE_SEPARATOR } from './consts'
+import { DOT_REGEX, DOT_PLACEHOLDER, SPREAD_REGEX, SPREAD_PLACEHOLDER, VARIABLE_PATH, OPEN_BRACKET_PLACEHOLDER, CLOSED_BRACKET_PLACEHOLDER, ARRAY_VALUE_SEPARATOR } from './consts'
 
 export function isValidKey(key) {
   return ['number', 'string', 'symbol'].includes(typeof key)
@@ -33,17 +33,18 @@ export function isStringifiedArray(key) {
 }
 
 export function escape(text) {
-  return text.replace(/\./gim, DOT_PLACEHOLDER).replace(/\[/gim, OPEN_BRACKET_PLACEHOLDER).replace(/\]/gim, CLOSED_BRACKET_PLACEHOLDER)
+  return text.replace(SPREAD_REGEX, SPREAD_PLACEHOLDER).replace(DOT_REGEX, DOT_PLACEHOLDER).replace(/\[/gim, OPEN_BRACKET_PLACEHOLDER).replace(/\]/gim, CLOSED_BRACKET_PLACEHOLDER)
 }
 
 export function unescape(text) {
-  return text.replace(new RegExp(DOT_PLACEHOLDER, 'gim'), '.').replace(new RegExp(OPEN_BRACKET_PLACEHOLDER, 'gim'), '[').replace(new RegExp(CLOSED_BRACKET_PLACEHOLDER, 'gim'), ']')
+  return text.replace(new RegExp(SPREAD_PLACEHOLDER, 'gim'), '..').replace(new RegExp(DOT_PLACEHOLDER, 'gim'), '.').replace(new RegExp(OPEN_BRACKET_PLACEHOLDER, 'gim'), '[').replace(new RegExp(CLOSED_BRACKET_PLACEHOLDER, 'gim'), ']')
 }
 
 export function splitPath(path) {
   if (Array.isArray(path)) path = path.join('.')
   return String(path)
     .replace(VARIABLE_PATH, escape) // replaces dots by placeholder in variables paths
+    .replace(SPREAD_REGEX, escape) // replaces dots by placeholder in variables paths
     .replace(/\.\[/g, '.') // replaces opening .[ by . (prevents faulty paths which would have a dot + brackets)
     .replace(/\[/g, '.') // replaces opening [ by .
     .replace(/^\./, '') // removes any dot at the beginning

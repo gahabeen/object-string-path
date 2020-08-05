@@ -1,6 +1,9 @@
 export const OBJECT_KEY_PREFIX = /^\^/
 export const VARIABLE_PATH = /({.*?})/gim
+export const DOT_REGEX = /\./gim
 export const DOT_PLACEHOLDER = '<~~~>'
+export const SPREAD_REGEX = /\.\./gim
+export const SPREAD_PLACEHOLDER = '<~SPREAD~>'
 export const OPEN_BRACKET_PLACEHOLDER = '<~OBRACK~>'
 export const CLOSED_BRACKET_PLACEHOLDER = '<~CBRACK~>'
 export const ARRAY_VALUE_SEPARATOR = '<~ARR~>'

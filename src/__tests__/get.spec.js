@@ -222,4 +222,100 @@ describe('get(<obj>, <path>, <context?>)', () => {
     const name = get(obj, 'profile.[name]')
     expect(name).toEqual(obj.profile.name)
   })
+
+  /** Spread operator in Arrays */
+
+  it('should get spread iterable, spread operator', () => {
+    const obj = { products: [{ name: 'Berries' }, { name: 'Marmelade' }] }
+    const value = get(obj, 'products..')
+    expect(value).toEqual(obj.products)
+  })
+
+  it('should get spread iterable, star version of spread operator', () => {
+    const obj = { products: [{ name: 'Berries' }, { name: 'Marmelade' }] }
+    const value = get(obj, 'products.*')
+    expect(value).toEqual(obj.products)
+  })
+
+  it('should get map value in array, spread operator', () => {
+    const obj = { products: [{ name: 'Berries' }, { name: 'Marmelade' }] }
+    const value = get(obj, 'products..name')
+    expect(value).toEqual(obj.products.map((p) => p.name))
+  })
+
+  it('should get map value in array, star version of spread operator', () => {
+    const obj = { products: [{ name: 'Berries' }, { name: 'Marmelade' }] }
+    const value = get(obj, 'products.*.name')
+    expect(value).toEqual(obj.products.map((p) => p.name))
+  })
+
+  it('should get map value in nested array, spread operator', () => {
+    const obj = {
+      products: [
+        { name: 'Berries', details: [{ title: 'Something' }, { title: 'Else' }] },
+        { name: 'Marmelade', details: [{ title: 'Something' }, { title: 'Else' }] },
+      ],
+    }
+    const value = get(obj, 'products..details..title')
+    expect(value).toEqual(obj.products.map((p) => 'details' in p && p.details.map((d) => d.title)))
+  })
+
+  it('should get map value in nested array, star version of spread operator', () => {
+    const obj = {
+      products: [
+        { name: 'Berries', details: [{ title: 'Something' }, { title: 'Else' }] },
+        { name: 'Marmelade', details: [{ title: 'Something' }, { title: 'Else' }] },
+      ],
+    }
+    const value = get(obj, 'products.*.details.*.title')
+    expect(value).toEqual(obj.products.map((p) => 'details' in p && p.details.map((d) => d.title)))
+  })
+
+  /** Spread operator in Objects */
+
+  it('should get spread iterable, spread operator', () => {
+    const obj = { products: { '1': { name: 'Berries' }, '2': { name: 'Marmelade' } } }
+    const value = get(obj, 'products..')
+    expect(value).toEqual(Object.values(obj.products))
+  })
+
+  it('should get spread iterable, star version of spread operator', () => {
+    const obj = { products: { '1': { name: 'Berries' }, '2': { name: 'Marmelade' } } }
+    const value = get(obj, 'products.*')
+    expect(value).toEqual(Object.values(obj.products))
+  })
+
+  it('should get map value in array, spread operator', () => {
+    const obj = { products: [{ name: 'Berries' }, { name: 'Marmelade' }] }
+    const value = get(obj, 'products..name')
+    expect(value).toEqual(Object.values(obj.products).map((p) => p.name))
+  })
+
+  it('should get map value in array, star version of spread operator', () => {
+    const obj = { products: { '1': { name: 'Berries' }, '2': { name: 'Marmelade' } } }
+    const value = get(obj, 'products.*.name')
+    expect(value).toEqual(Object.values(obj.products).map((p) => p.name))
+  })
+
+  it('should get map value in nested array, spread operator', () => {
+    const obj = {
+      products: {
+        '1': { name: 'Berries', details: { '1': { title: 'Something' }, '2': { title: 'Else' } } },
+        '2': { name: 'Marmelade', details: { '1': { title: 'Something' }, '2': { title: 'Else' } } },
+      },
+    }
+    const value = get(obj, 'products..details..title')
+    expect(value).toEqual(Object.values(obj.products).map((p) => 'details' in p && Object.values(p.details).map((d) => d.title)))
+  })
+
+  it('should get map value in nested array, star version of spread operator', () => {
+    const obj = {
+      products: {
+        '1': { name: 'Berries', details: { '1': { title: 'Something' }, '2': { title: 'Else' } } },
+        '2': { name: 'Marmelade', details: { '1': { title: 'Something' }, '2': { title: 'Else' } } },
+      },
+    }
+    const value = get(obj, 'products.*.details.*.title')
+    expect(value).toEqual(Object.values(obj.products).map((p) => 'details' in p && Object.values(p.details).map((d) => d.title)))
+  })
 })

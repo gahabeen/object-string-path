@@ -222,4 +222,110 @@ describe('set(<obj>, <path>, <value>, <context?>)', () => {
     set(obj, 'profile.[name]', 'Baloo')
     expect(obj.profile.name).toBe('Baloo')
   })
+
+  /** Spread operator in Arrays */
+
+  it('should set in a spread iterable, spread operator', () => {
+    const obj = { products: [{ name: 'Berries' }, { name: 'Marmelade' }] }
+    set(obj, 'products..', null)
+    expect(obj.products).toEqual([null, null])
+  })
+
+  it('should set in a spread iterable, star version of spread operator', () => {
+    const obj = { products: [{ name: 'Berries' }, { name: 'Marmelade' }] }
+    set(obj, 'products.*', null)
+    expect(obj.products).toEqual([null, null])
+  })
+
+  it('should set in a map value in array, spread operator', () => {
+    const obj = { products: [{ name: 'Berries' }, { name: 'Marmelade' }] }
+    set(obj, 'products..name', null)
+    expect(obj).toEqual({ products: [{ name: null }, { name: null }] })
+  })
+
+  it('should set in a map value in array, star version of spread operator', () => {
+    const obj = { products: [{ name: 'Berries' }, { name: 'Marmelade' }] }
+    set(obj, 'products.*.name', null)
+    expect(obj).toEqual({ products: [{ name: null }, { name: null }] })
+  })
+
+  it('should set in a map value in nested array, spread operator', () => {
+    const obj = {
+      products: [
+        { name: 'Berries', details: [{ title: 'Something' }, { title: 'Else' }] },
+        { name: 'Marmelade', details: [{ title: 'Something' }, { title: 'Else' }] },
+      ],
+    }
+    set(obj, 'products..details..title', null)
+    expect(obj).toEqual({
+      products: [
+        { name: 'Berries', details: [{ title: null }, { title: null }] },
+        { name: 'Marmelade', details: [{ title: null }, { title: null }] },
+      ],
+    })
+  })
+
+  it('should set in a map value in nested array, star version of spread operator', () => {
+    const obj = {
+      products: [
+        { name: 'Berries', details: [{ title: 'Something' }, { title: 'Else' }] },
+        { name: 'Marmelade', details: [{ title: 'Something' }, { title: 'Else' }] },
+      ],
+    }
+    set(obj, 'products.*.details.*.title', null)
+    expect(obj).toEqual({
+      products: [
+        { name: 'Berries', details: [{ title: null }, { title: null }] },
+        { name: 'Marmelade', details: [{ title: null }, { title: null }] },
+      ],
+    })
+  })
+
+  /** Spread operator in Objects */
+
+  // it('should set in a spread iterable, spread operator', () => {
+  //   const obj = { products: { '1': { name: 'Berries' }, '2': { name: 'Marmelade' } } }
+  //   set(obj, 'products..')
+  //   expect(value).toEqual(Object.values(obj.products))
+  // })
+
+  // it('should set in a spread iterable, star version of spread operator', () => {
+  //   const obj = { products: { '1': { name: 'Berries' }, '2': { name: 'Marmelade' } } }
+  //   set(obj, 'products.*')
+  //   expect(value).toEqual(Object.values(obj.products))
+  // })
+
+  // it('should set in a map value in array, spread operator', () => {
+  //   const obj = { products: [{ name: 'Berries' }, { name: 'Marmelade' }] }
+  //   set(obj, 'products..name')
+  //   expect(value).toEqual(Object.values(obj.products).map((p) => p.name))
+  // })
+
+  // it('should set in a map value in array, star version of spread operator', () => {
+  //   const obj = { products: { '1': { name: 'Berries' }, '2': { name: 'Marmelade' } } }
+  //   set(obj, 'products.*.name')
+  //   expect(value).toEqual(Object.values(obj.products).map((p) => p.name))
+  // })
+
+  // it('should set in a map value in nested array, spread operator', () => {
+  //   const obj = {
+  //     products: {
+  //       '1': { name: 'Berries', details: { '1': { title: 'Something' }, '2': { title: 'Else' } } },
+  //       '2': { name: 'Marmelade', details: { '1': { title: 'Something' }, '2': { title: 'Else' } } },
+  //     },
+  //   }
+  //   set(obj, 'products..details..title')
+  //   expect(value).toEqual(Object.values(obj.products).map((p) => 'details' in p && Object.values(p.details).map((d) => d.title)))
+  // })
+
+  // it('should set in a map value in nested array, star version of spread operator', () => {
+  //   const obj = {
+  //     products: {
+  //       '1': { name: 'Berries', details: { '1': { title: 'Something' }, '2': { title: 'Else' } } },
+  //       '2': { name: 'Marmelade', details: { '1': { title: 'Something' }, '2': { title: 'Else' } } },
+  //     },
+  //   }
+  //   set(obj, 'products.*.details.*.title')
+  //   expect(value).toEqual(Object.values(obj.products).map((p) => 'details' in p && Object.values(p.details).map((d) => d.title)))
+  // })
 })

@@ -1,4 +1,4 @@
-import { VARIABLE_PATH, ARRAY_VALUE_SEPARATOR, OBJECT_KEY_PREFIX } from './consts'
+import { SPREAD_REGEX, VARIABLE_PATH, ARRAY_VALUE_SEPARATOR, OBJECT_KEY_PREFIX } from './consts'
 import { splitPath, isObject, isValidKey, unescape, isStringifiedArray, stringifyArray } from './utils'
 
 export function resolveVariable(context) {
@@ -48,10 +48,24 @@ export function resolveStep(steps, parent, context) {
     // Resolve the different variables
     _step = _step.replace(VARIABLE_PATH, resolveVariable(context))
 
+    if (_step.match(SPREAD_REGEX)) {
+      const [_spreadStep, _nextStep, ..._followingSteps] = _step.split(SPREAD_REGEX).filter(Boolean)
+      // console.log('_step', _step)
+      _step = _spreadStep
+      // Make sure to include all spread operators
+      for (let _followingStep of _followingSteps.reverse()) {
+        output._steps.unshift('*', _followingStep)
+      }
+
+      output._steps.unshift(...['*', _nextStep].filter(Boolean))
+      // console.log('output._steps', _step, output._steps)
+    }
+
     // console.log('_step', _step, steps, parent, context)
     if (_step.includes('undefined')) {
       output.failed = true
-    } // Check for equality condition,
+    }
+    // Check for equality condition,
     else if (isStringifiedArray(_step) || _step.includes('=')) {
       const keyValue = isStringifiedArray(_step)
         ? _step.split(ARRAY_VALUE_SEPARATOR).slice(1, -1)
@@ -134,7 +148,7 @@ export function setProp(obj, key, value) {
 }
 
 export function removeProp(obj, parent, parentPath, key, context) {
-  if (Array.isArray(obj)) {
+  if (Array.isArray(parent)) {
     parent.splice(+key, 1)
     return true
   } else if (isObject(parent)) {
@@ -166,8 +180,32 @@ export function makeHas(options) {
         const { step, _steps: __steps, failed } = resolveStep(_steps, _obj, context)
         // console.log('step', step, '_steps', _steps, "failed", failed)
         if (!failed) {
-          // console.log('options.hasProp(_obj, step)', options.hasProp(_obj, step), _obj, step)
-          return options.hasProp(_obj, step) && _has(options.getProp(_obj, step), __steps)
+          if (step === '*') {
+            let iterable = null
+            if (isObject(_obj)) {
+              iterable = Object.values(_obj)
+            } else if (Array.isArray(_obj)) {
+              iterable = _obj
+            }
+            if (Array.isArray(iterable)) {
+              if (__steps.length > 0) {
+                return iterable.every((_subObj) => _has(_subObj, __steps))
+              }
+              // if no following check, default to Boolean test
+              else {
+                return iterable.every(Boolean)
+              }
+            } else {
+              return false
+            }
+          } else {
+            if (!options.hasProp(_obj, step)) {
+              // stop right now, no need to continue
+              return false
+            } else {
+              return _has(options.getProp(_obj, step), __steps)
+            }
+          }
         } else {
           return false
         }
@@ -202,8 +240,30 @@ export function makeGet(options) {
       if (_steps.length > 0) {
         const { step, _steps: __steps, failed } = resolveStep(_steps, _obj, _context)
 
-        if (!failed && options.hasProp(_obj, step)) {
-          return _get(options.getProp(_obj, step), __steps, _context)
+        if (!failed) {
+          if (step === '*') {
+            let iterable = null
+            if (isObject(_obj)) {
+              iterable = Object.values(_obj)
+            } else if (Array.isArray(_obj)) {
+              iterable = _obj
+            }
+            if (Array.isArray(iterable)) {
+              if (__steps.length > 0) {
+                return iterable.map((_subObj) => _get(_subObj, __steps))
+              } else {
+                return iterable
+              }
+            } else {
+              return
+            }
+          } else {
+            if (options.hasProp(_obj, step)) {
+              return _get(options.getProp(_obj, step), __steps, _context)
+            } else {
+              return
+            }
+          }
         } else {
           return
         }
@@ -237,29 +297,51 @@ export function makeSet(options) {
         // console.log("resolveStep", step, __steps, failed);
         if (failed) {
           return
+        } else if (step === '*') {
+          if (isObject(_obj) || Array.isArray(_obj)) {
+            // console.log({ step, __steps, _obj })
+            if (__steps.length > 0) {
+              for (let key in _obj) {
+                // console.log({ item: options.getProp(_obj, key), __steps, _value })
+                _set(options.getProp(_obj, key), __steps, _value)
+              }
+            } else {
+              for (let key in _obj) {
+                // console.log({ key, _obj, _value })
+                options.setProp(_obj, key, _value)
+              }
+            }
+          }
         } else if (__steps.length > 0) {
           const nextObj = options.getProp(_obj, step)
           const { step: nextStep } = resolveStep(__steps, nextObj, context)
-          if (Number.isInteger(+nextStep) && !isObject(nextObj)) {
-            // Sub prop exists and is an array
-            if (options.hasProp(_obj, step) && Array.isArray(nextObj)) {
-              _set(nextObj, __steps, _value)
+          if (nextStep === '*') {
+            if (options.hasProp(_obj, step)) {
+              _set(options.getProp(_obj, step), __steps, _value)
             }
-            // Sub prop doesn't exists and should an array
+          } else {
+            if (Number.isInteger(+nextStep) && !isObject(nextObj)) {
+              // Sub prop exists and is an array
+              if (options.hasProp(_obj, step) && Array.isArray(nextObj)) {
+                _set(nextObj, __steps, _value)
+              }
+              // Sub prop doesn't exists and should an array
+              else {
+                _set(options.setProp(_obj, step, []), __steps, _value)
+              }
+            }
+            // Sub prop exists and is an object
+            else if (options.hasProp(_obj, step) && isObject(nextObj)) {
+              // console.log("setting", _obj, step, options.getProp(_obj, step), __steps);
+              _set(options.getProp(_obj, step), __steps, _value)
+            }
+            // Sub prop doesn't exists and should be an object
             else {
-              _set(options.setProp(_obj, step, []), __steps, _value)
+              _set(options.setProp(_obj, step, {}), __steps, _value)
             }
-          }
-          // Sub prop exists and is an object
-          else if (options.hasProp(_obj, step) && isObject(nextObj)) {
-            // console.log("setting", _obj, step, options.getProp(_obj, step), __steps);
-            _set(options.getProp(_obj, step), __steps, _value)
-          }
-          // Sub prop doesn't exists and should be an object
-          else {
-            _set(options.setProp(_obj, step, {}), __steps, _value)
           }
         } else {
+          // console.log({_obj, step, _value});
           options.setProp(_obj, step, _value)
         }
       } else {

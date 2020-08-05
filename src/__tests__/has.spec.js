@@ -221,4 +221,148 @@ describe('has(<obj>, <path>, <context?>)', () => {
     const obj = { profile: { name: 'Teddy' } }
     expect(has(obj, 'profile.[name]')).toBe(true)
   })
+
+  /** Spread operator in Arrays */
+
+  it('should check if array checks out against Boolean(), spread operator', () => {
+    const obj = { products: [{ name: 'Berries' }, { name: 'Marmelade' }] }
+    const valid = has(obj, 'products..')
+    expect(valid).toEqual(true)
+  })
+
+  it('should fail to check if array checks out against Boolean(), spread operator', () => {
+    const obj = { products: [{ name: 'Berries' }, null] }
+    const valid = has(obj, 'products..')
+    expect(valid).toEqual(false)
+  })
+
+  it('should check if array checks out against Boolean(), star version of spread operator', () => {
+    const obj = { products: [{ name: 'Berries' }, { name: 'Marmelade' }] }
+    const valid = has(obj, 'products.*')
+    expect(valid).toEqual(true)
+  })
+
+  it('should fail to check if array checks out against Boolean(), star version of spread operator', () => {
+    const obj = { products: [{ name: 'Berries' }, null] }
+    const valid = has(obj, 'products.*')
+    expect(valid).toEqual(false)
+  })
+
+  it('should check every value in array, spread operator', () => {
+    const obj = { products: [{ name: 'Berries' }, { name: 'Marmelade' }] }
+    const valid = has(obj, 'products..name')
+    expect(valid).toEqual(obj.products.every((p) => 'name' in p))
+  })
+
+  it('should fail to check every value in array, spread operator', () => {
+    const obj = { products: [{}, { name: 'Marmelade' }] }
+    const valid = has(obj, 'products..name')
+    expect(valid).toEqual(obj.products.every((p) => 'name' in p))
+  })
+
+  it('should check every value in array, star version of spread operator', () => {
+    const obj = { products: [{ name: 'Berries' }, { name: 'Marmelade' }] }
+    const valid = has(obj, 'products.*.name')
+    expect(valid).toEqual(obj.products.every((p) => 'name' in p))
+  })
+
+  it('should fail to check every value in array, star version of spread operator', () => {
+    const obj = { products: [{}, { name: 'Marmelade' }] }
+    const valid = has(obj, 'products.*.name')
+    expect(valid).toEqual(obj.products.every((p) => 'name' in p))
+  })
+
+  it('should check every value in nested array, spread operator', () => {
+    const obj = {
+      products: [
+        { name: 'Berries', details: [{ title: 'Something' }, { title: 'Else' }] },
+        { name: 'Marmelade', details: [{ title: 'Something' }, { title: 'Else' }] },
+      ],
+    }
+    const valid = has(obj, 'products..details..title')
+    expect(valid).toEqual(obj.products.every((p) => 'details' in p && p.details.every((d) => 'title' in d)))
+  })
+
+  it('should check every value in nested array, star version of spread operator', () => {
+    const obj = {
+      products: [
+        { name: 'Berries', details: [{ title: 'Something' }, { title: 'Else' }] },
+        { name: 'Marmelade', details: [{ title: 'Something' }, { title: 'Else' }] },
+      ],
+    }
+    const valid = has(obj, 'products.*.details.*.title')
+    expect(valid).toEqual(obj.products.every((p) => 'details' in p && p.details.every((d) => 'title' in d)))
+  })
+
+  /** Spread operator in Objects */
+
+  it('should check if array checks out against Boolean(), spread operator', () => {
+    const obj = { products: { '1': { name: 'Berries' }, '2': { name: 'Marmelade' } } }
+    const valid = has(obj, 'products..')
+    expect(valid).toEqual(true)
+  })
+
+  it('should fail to check if array checks out against Boolean(), spread operator', () => {
+    const obj = { products: { '1': { name: 'Berries' }, '2': null } }
+    const valid = has(obj, 'products..')
+    expect(valid).toEqual(false)
+  })
+
+  it('should check if array checks out against Boolean(), star version of spread operator', () => {
+    const obj = { products: { '1': { name: 'Berries' }, '2': { name: 'Marmelade' } } }
+    const valid = has(obj, 'products.*')
+    expect(valid).toEqual(true)
+  })
+
+  it('should fail to check if array checks out against Boolean(), star version of spread operator', () => {
+    const obj = { products: { '1': { name: 'Berries' }, '2': null } }
+    const valid = has(obj, 'products.*')
+    expect(valid).toEqual(false)
+  })
+
+  it('should check every value in array, spread operator', () => {
+    const obj = { products: [{ name: 'Berries' }, { name: 'Marmelade' }] }
+    const valid = has(obj, 'products..name')
+    expect(valid).toEqual(Object.values(obj.products).every((p) => 'name' in p))
+  })
+
+  it('should fail to check every value in array, spread operator', () => {
+    const obj = { products: { '1': {}, '2': { name: 'Marmelade' } } }
+    const valid = has(obj, 'products..name')
+    expect(valid).toEqual(Object.values(obj.products).every((p) => 'name' in p))
+  })
+
+  it('should check every value in array, star version of spread operator', () => {
+    const obj = { products: { '1': { name: 'Berries' }, '2': { name: 'Marmelade' } } }
+    const valid = has(obj, 'products.*.name')
+    expect(valid).toEqual(Object.values(obj.products).every((p) => 'name' in p))
+  })
+
+  it('should fail to check every value in array, star version of spread operator', () => {
+    const obj = { products: { '1': {}, '2': { name: 'Marmelade' } } }
+    const valid = has(obj, 'products.*.name')
+    expect(valid).toEqual(Object.values(obj.products).every((p) => 'name' in p))
+  })
+
+  it('should check every value in nested array, spread operator', () => {
+    const obj = {
+      products: {
+        '1': { name: 'Berries', details: { '1': { title: 'Something' }, '2': { title: 'Else' } } },
+        '2': { name: 'Marmelade', details: { '1': { title: 'Something' }, '2': { title: 'Else' } } },
+      },
+    }
+    const valid = has(obj, 'products..details..title')
+    expect(valid).toEqual(Object.values(obj.products).every((p) => 'details' in p && Object.values(p.details).every((d) => 'title' in d)))
+  })
+
+  it('should check every value in nested array, star version of spread operator', () => {
+    const obj = {
+      products: {
+        '1': { name: 'Berries', details: { '1': { title: 'Something' }, '2': { title: 'Else' } } },
+        '2': { name: 'Marmelade', details: { '1': { title: 'Something' }, '2': { title: 'Else' } } },
+      },
+    }
+    const valid = has(obj, 'products.*.details.*.title')
+    expect(valid).toEqual(Object.values(obj.products).every((p) => 'details' in p && Object.values(p.details).every((d) => 'title' in d)))
+  })
 })
