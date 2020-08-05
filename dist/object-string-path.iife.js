@@ -1,5 +1,5 @@
 /*!
-  * object-string-path v0.1.30
+  * object-string-path v0.1.31
   * (c) 2020 Gabin Desserprit
   * @license MIT
   */
@@ -8,7 +8,10 @@ var ObjectStringPath = (function (exports) {
 
   const OBJECT_KEY_PREFIX = /^\^/;
   const VARIABLE_PATH = /({.*?})/gim;
+  const DOT_REGEX = /\./gim;
   const DOT_PLACEHOLDER = '<~~~>';
+  const SPREAD_REGEX = /\.\./gim;
+  const SPREAD_PLACEHOLDER = '<~SPREAD~>';
   const OPEN_BRACKET_PLACEHOLDER = '<~OBRACK~>';
   const CLOSED_BRACKET_PLACEHOLDER = '<~CBRACK~>';
   const ARRAY_VALUE_SEPARATOR = '<~ARR~>';
@@ -46,17 +49,18 @@ var ObjectStringPath = (function (exports) {
   }
 
   function escape(text) {
-    return text.replace(/\./gim, DOT_PLACEHOLDER).replace(/\[/gim, OPEN_BRACKET_PLACEHOLDER).replace(/\]/gim, CLOSED_BRACKET_PLACEHOLDER)
+    return text.replace(SPREAD_REGEX, SPREAD_PLACEHOLDER).replace(DOT_REGEX, DOT_PLACEHOLDER).replace(/\[/gim, OPEN_BRACKET_PLACEHOLDER).replace(/\]/gim, CLOSED_BRACKET_PLACEHOLDER)
   }
 
   function unescape(text) {
-    return text.replace(new RegExp(DOT_PLACEHOLDER, 'gim'), '.').replace(new RegExp(OPEN_BRACKET_PLACEHOLDER, 'gim'), '[').replace(new RegExp(CLOSED_BRACKET_PLACEHOLDER, 'gim'), ']')
+    return text.replace(new RegExp(SPREAD_PLACEHOLDER, 'gim'), '..').replace(new RegExp(DOT_PLACEHOLDER, 'gim'), '.').replace(new RegExp(OPEN_BRACKET_PLACEHOLDER, 'gim'), '[').replace(new RegExp(CLOSED_BRACKET_PLACEHOLDER, 'gim'), ']')
   }
 
   function splitPath(path) {
     if (Array.isArray(path)) path = path.join('.');
     return String(path)
       .replace(VARIABLE_PATH, escape) // replaces dots by placeholder in variables paths
+      .replace(SPREAD_REGEX, escape) // replaces dots by placeholder in variables paths
       .replace(/\.\[/g, '.') // replaces opening .[ by . (prevents faulty paths which would have a dot + brackets)
       .replace(/\[/g, '.') // replaces opening [ by .
       .replace(/^\./, '') // removes any dot at the beginning
@@ -111,10 +115,24 @@ var ObjectStringPath = (function (exports) {
       // Resolve the different variables
       _step = _step.replace(VARIABLE_PATH, resolveVariable(context));
 
+      if (_step.match(SPREAD_REGEX)) {
+        const [_spreadStep, _nextStep, ..._followingSteps] = _step.split(SPREAD_REGEX).filter(Boolean);
+        // console.log('_step', _step)
+        _step = _spreadStep;
+        // Make sure to include all spread operators
+        for (let _followingStep of _followingSteps.reverse()) {
+          output._steps.unshift('*', _followingStep);
+        }
+
+        output._steps.unshift(...['*', _nextStep].filter(Boolean));
+        // console.log('output._steps', _step, output._steps)
+      }
+
       // console.log('_step', _step, steps, parent, context)
       if (_step.includes('undefined')) {
         output.failed = true;
-      } // Check for equality condition,
+      }
+      // Check for equality condition,
       else if (isStringifiedArray(_step) || _step.includes('=')) {
         const keyValue = isStringifiedArray(_step)
           ? _step.split(ARRAY_VALUE_SEPARATOR).slice(1, -1)
@@ -197,7 +215,8 @@ var ObjectStringPath = (function (exports) {
   }
 
   function removeProp(obj, parent, parentPath, key, context) {
-    if (Array.isArray(obj)) {
+    console.log('removeProp', { parent, key });
+    if (Array.isArray(parent)) {
       parent.splice(+key, 1);
       return true
     } else if (isObject(parent)) {
@@ -229,8 +248,32 @@ var ObjectStringPath = (function (exports) {
           const { step, _steps: __steps, failed } = resolveStep(_steps, _obj, context);
           // console.log('step', step, '_steps', _steps, "failed", failed)
           if (!failed) {
-            // console.log('options.hasProp(_obj, step)', options.hasProp(_obj, step), _obj, step)
-            return options.hasProp(_obj, step) && _has(options.getProp(_obj, step), __steps)
+            if (step === '*') {
+              let iterable = null;
+              if (isObject(_obj)) {
+                iterable = Object.values(_obj);
+              } else if (Array.isArray(_obj)) {
+                iterable = _obj;
+              }
+              if (Array.isArray(iterable)) {
+                if (__steps.length > 0) {
+                  return iterable.every((_subObj) => _has(_subObj, __steps))
+                }
+                // if no following check, default to Boolean test
+                else {
+                  return iterable.every(Boolean)
+                }
+              } else {
+                return false
+              }
+            } else {
+              if (!options.hasProp(_obj, step)) {
+                // stop right now, no need to continue
+                return false
+              } else {
+                return _has(options.getProp(_obj, step), __steps)
+              }
+            }
           } else {
             return false
           }
@@ -265,8 +308,30 @@ var ObjectStringPath = (function (exports) {
         if (_steps.length > 0) {
           const { step, _steps: __steps, failed } = resolveStep(_steps, _obj, _context);
 
-          if (!failed && options.hasProp(_obj, step)) {
-            return _get(options.getProp(_obj, step), __steps, _context)
+          if (!failed) {
+            if (step === '*') {
+              let iterable = null;
+              if (isObject(_obj)) {
+                iterable = Object.values(_obj);
+              } else if (Array.isArray(_obj)) {
+                iterable = _obj;
+              }
+              if (Array.isArray(iterable)) {
+                if (__steps.length > 0) {
+                  return iterable.map((_subObj) => _get(_subObj, __steps))
+                } else {
+                  return iterable
+                }
+              } else {
+                return
+              }
+            } else {
+              if (options.hasProp(_obj, step)) {
+                return _get(options.getProp(_obj, step), __steps, _context)
+              } else {
+                return
+              }
+            }
           } else {
             return
           }
@@ -300,29 +365,51 @@ var ObjectStringPath = (function (exports) {
           // console.log("resolveStep", step, __steps, failed);
           if (failed) {
             return
+          } else if (step === '*') {
+            if (isObject(_obj) || Array.isArray(_obj)) {
+              // console.log({ step, __steps, _obj })
+              if (__steps.length > 0) {
+                for (let key in _obj) {
+                  // console.log({ item: options.getProp(_obj, key), __steps, _value })
+                  _set(options.getProp(_obj, key), __steps, _value);
+                }
+              } else {
+                for (let key in _obj) {
+                  // console.log({ key, _obj, _value })
+                  options.setProp(_obj, key, _value);
+                }
+              }
+            }
           } else if (__steps.length > 0) {
             const nextObj = options.getProp(_obj, step);
             const { step: nextStep } = resolveStep(__steps, nextObj, context);
-            if (Number.isInteger(+nextStep) && !isObject(nextObj)) {
-              // Sub prop exists and is an array
-              if (options.hasProp(_obj, step) && Array.isArray(nextObj)) {
-                _set(nextObj, __steps, _value);
+            if (nextStep === '*') {
+              if (options.hasProp(_obj, step)) {
+                _set(options.getProp(_obj, step), __steps, _value);
               }
-              // Sub prop doesn't exists and should an array
+            } else {
+              if (Number.isInteger(+nextStep) && !isObject(nextObj)) {
+                // Sub prop exists and is an array
+                if (options.hasProp(_obj, step) && Array.isArray(nextObj)) {
+                  _set(nextObj, __steps, _value);
+                }
+                // Sub prop doesn't exists and should an array
+                else {
+                  _set(options.setProp(_obj, step, []), __steps, _value);
+                }
+              }
+              // Sub prop exists and is an object
+              else if (options.hasProp(_obj, step) && isObject(nextObj)) {
+                // console.log("setting", _obj, step, options.getProp(_obj, step), __steps);
+                _set(options.getProp(_obj, step), __steps, _value);
+              }
+              // Sub prop doesn't exists and should be an object
               else {
-                _set(options.setProp(_obj, step, []), __steps, _value);
+                _set(options.setProp(_obj, step, {}), __steps, _value);
               }
-            }
-            // Sub prop exists and is an object
-            else if (options.hasProp(_obj, step) && isObject(nextObj)) {
-              // console.log("setting", _obj, step, options.getProp(_obj, step), __steps);
-              _set(options.getProp(_obj, step), __steps, _value);
-            }
-            // Sub prop doesn't exists and should be an object
-            else {
-              _set(options.setProp(_obj, step, {}), __steps, _value);
             }
           } else {
+            // console.log({_obj, step, _value});
             options.setProp(_obj, step, _value);
           }
         } else {
@@ -350,12 +437,48 @@ var ObjectStringPath = (function (exports) {
 
       const _get = options.get || makeGet({ getProp: options.getProp, hasProp: options.hasProp, getSteps: options.getSteps });
 
-      const keyToDelete = steps.slice(-1);
-      const parentPath = steps.slice(0, -1).join('.');
-      const parent = steps.length > 1 ? _get(obj, parentPath, context) : obj;
+      let keyToDelete = steps.slice(-1);
+      let parentPath = steps.slice(0, -1).join('.');
+      let parent = steps.length > 1 ? _get(obj, parentPath, context) : obj;
 
-      const { step, failed } = resolveStep(keyToDelete, parent, context);
-      if (!failed && options.hasProp(parent, step)) {
+      if (keyToDelete[0] === '*') {
+        keyToDelete = steps.slice(-2);
+        parentPath = steps.slice(0, -2).join('.');
+        parent = steps.length > 2 ? _get(obj, parentPath, context) : obj;
+      }
+
+      const { step, _steps: __steps, failed } = resolveStep(keyToDelete, parent, context);
+      // console.log({ step, __steps, parent, parentPath, keyToDelete })
+
+      if (__steps.includes('*')) {
+        const _obj = _get(parent, step, context);
+        const { step: nextStep, failed } = resolveStep(__steps.slice(1), _obj, context);
+        // console.log({ nextStep, failed, __steps, _obj })
+        if (isObject(_obj)) {
+          for (const key of Object.keys(_obj)) {
+            if (__steps.length === 1) {
+              options.removeProp(_get(_obj, key, context), _obj, parentPath, key, context);
+            } else if (__steps.length > 1) {
+              options.removeProp(_get(_obj, `${key}.${nextStep}`, context), _get(_obj, key, context), parentPath, nextStep, context);
+            }
+          }
+        } else if (Array.isArray(_obj)) {
+          for (const key of Object.keys(_obj)) {
+            if (__steps.length === 1) {
+              options.removeProp(_get(_obj, key, context), _obj, parentPath, 0, context);
+            } else {
+              options.removeProp(_get(_obj, `${key}.${nextStep}`, context), _get(_obj, key, context), parentPath, nextStep, context);
+            }
+            // always remove first one as array's size decreases
+          }
+          // switch to set??
+          // options.setProp(_obj, undefined, [])
+        }
+      } else if (parentPath.endsWith('*')) {
+        for (const key of Object.keys(parent)) {
+          options.removeProp(_get(parent, `${key}.${step}`, context), _get(parent, key, context), parentPath, step, context);
+        }
+      } else if (!failed && options.hasProp(parent, step)) {
         return options.removeProp(obj, parent, parentPath, step, context)
       } else {
         return false
@@ -371,8 +494,11 @@ var ObjectStringPath = (function (exports) {
   exports.ARRAY_VALUE_SEPARATOR = ARRAY_VALUE_SEPARATOR;
   exports.CLOSED_BRACKET_PLACEHOLDER = CLOSED_BRACKET_PLACEHOLDER;
   exports.DOT_PLACEHOLDER = DOT_PLACEHOLDER;
+  exports.DOT_REGEX = DOT_REGEX;
   exports.OBJECT_KEY_PREFIX = OBJECT_KEY_PREFIX;
   exports.OPEN_BRACKET_PLACEHOLDER = OPEN_BRACKET_PLACEHOLDER;
+  exports.SPREAD_PLACEHOLDER = SPREAD_PLACEHOLDER;
+  exports.SPREAD_REGEX = SPREAD_REGEX;
   exports.VARIABLE_PATH = VARIABLE_PATH;
   exports.escape = escape;
   exports.get = get;
