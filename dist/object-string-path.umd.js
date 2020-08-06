@@ -1,5 +1,5 @@
 /*!
-  * object-string-path v0.1.4
+  * object-string-path v0.1.41
   * (c) 2020 Gabin Desserprit
   * @license MIT
   */
@@ -441,7 +441,7 @@
 
       function _remove(_obj, _steps, _context) {
         const { step, _steps: __steps, failed } = resolveStep(_steps, _obj, _context);
-        console.log({ step, __steps, failed });
+        // console.log({ step, __steps, failed })
 
         if (failed) {
           // stop
