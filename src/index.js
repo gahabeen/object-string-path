@@ -147,8 +147,8 @@ export function setProp(obj, key, value) {
   }
 }
 
-export function removeProp(obj, parent, parentPath, key, context) {
-  console.log('removeProp', { parent, key })
+export function removeProp(parent, key, context) {
+  // console.log('removeProp', { parent, key })
   if (Array.isArray(parent)) {
     parent.splice(+key, 1)
     return true
@@ -291,10 +291,10 @@ export function makeSet(options) {
   return function (obj, path, value, context) {
     const steps = options.afterGetSteps(options.getSteps(path))
 
-    const _set = (_obj, _steps, _value) => {
+    const _set = (_obj, _steps, _value, _context) => {
       // console.log("_set", _obj, _steps, _value);
       if (_steps.length > 0) {
-        const { step, _steps: __steps, failed } = resolveStep(_steps, _obj, context)
+        const { step, _steps: __steps, failed } = resolveStep(_steps, _obj, _context)
         // console.log("resolveStep", step, __steps, failed);
         if (failed) {
           return
@@ -304,7 +304,7 @@ export function makeSet(options) {
             if (__steps.length > 0) {
               for (let key in _obj) {
                 // console.log({ item: options.getProp(_obj, key), __steps, _value })
-                _set(options.getProp(_obj, key), __steps, _value)
+                _set(options.getProp(_obj, key), __steps, _value, _context)
               }
             } else {
               for (let key in _obj) {
@@ -315,30 +315,32 @@ export function makeSet(options) {
           }
         } else if (__steps.length > 0) {
           const nextObj = options.getProp(_obj, step)
-          const { step: nextStep } = resolveStep(__steps, nextObj, context)
-          if (nextStep === '*') {
+          const { step: nextStep, failed } = resolveStep(__steps, nextObj, _context)
+          if (failed) {
+            // stop
+          } else if (nextStep === '*') {
             if (options.hasProp(_obj, step)) {
-              _set(options.getProp(_obj, step), __steps, _value)
+              _set(options.getProp(_obj, step), __steps, _value, _context)
             }
           } else {
             if (Number.isInteger(+nextStep) && !isObject(nextObj)) {
               // Sub prop exists and is an array
               if (options.hasProp(_obj, step) && Array.isArray(nextObj)) {
-                _set(nextObj, __steps, _value)
+                _set(nextObj, __steps, _value, _context)
               }
               // Sub prop doesn't exists and should an array
               else {
-                _set(options.setProp(_obj, step, []), __steps, _value)
+                _set(options.setProp(_obj, step, []), __steps, _value, _context)
               }
             }
             // Sub prop exists and is an object
             else if (options.hasProp(_obj, step) && isObject(nextObj)) {
               // console.log("setting", _obj, step, options.getProp(_obj, step), __steps);
-              _set(options.getProp(_obj, step), __steps, _value)
+              _set(options.getProp(_obj, step), __steps, _value, _context)
             }
             // Sub prop doesn't exists and should be an object
             else {
-              _set(options.setProp(_obj, step, {}), __steps, _value)
+              _set(options.setProp(_obj, step, {}), __steps, _value, _context)
             }
           }
         } else {
@@ -350,7 +352,7 @@ export function makeSet(options) {
       }
     }
 
-    _set(obj, steps, value)
+    _set(obj, steps, value, context)
   }
 }
 
@@ -367,55 +369,40 @@ export function makeRemove(options) {
 
   return function (obj, path, context) {
     const steps = options.afterGetSteps(options.getSteps(path))
-
     const _get = options.get || makeGet({ getProp: options.getProp, hasProp: options.hasProp, getSteps: options.getSteps })
 
-    let keyToDelete = steps.slice(-1)
-    let parentPath = steps.slice(0, -1).join('.')
-    let parent = steps.length > 1 ? _get(obj, parentPath, context) : obj
+    function _remove(_obj, _steps, _context) {
+      const { step, _steps: __steps, failed } = resolveStep(_steps, _obj, _context)
+      console.log({ step, __steps, failed })
 
-    if (keyToDelete[0] === '*') {
-      keyToDelete = steps.slice(-2)
-      parentPath = steps.slice(0, -2).join('.')
-      parent = steps.length > 2 ? _get(obj, parentPath, context) : obj
+      if (failed) {
+        // stop
+        return false
+      } else if (step === '*') {
+        if (isObject(_obj) || Array.isArray(_obj)) {
+          return Object.keys(_obj).every((key) => {
+            if (__steps.length > 0) {
+              return _remove(_get(_obj, key, _context), __steps, _context)
+            } else {
+              return options.removeProp(_obj, Array.isArray(_obj) ? 0 : key, _context)
+            }
+          })
+        }
+      } else if (__steps.length > 0) {
+        if (failed) {
+          // stop
+          return false
+        } else {
+          return _remove(options.getProp(_obj, step), __steps, _context)
+        }
+      } else if (options.hasProp(_obj, step)) {
+        return options.removeProp(_obj, step, _context)
+      } else {
+        return false
+      }
     }
 
-    const { step, _steps: __steps, failed } = resolveStep(keyToDelete, parent, context)
-    // console.log({ step, __steps, parent, parentPath, keyToDelete })
-
-    if (__steps.includes('*')) {
-      const _obj = _get(parent, step, context)
-      const { step: nextStep, failed } = resolveStep(__steps.slice(1), _obj, context)
-      // console.log({ nextStep, failed, __steps, _obj })
-      if (isObject(_obj)) {
-        for (const key of Object.keys(_obj)) {
-          if (__steps.length === 1) {
-            options.removeProp(_get(_obj, key, context), _obj, parentPath, key, context)
-          } else if (__steps.length > 1) {
-            options.removeProp(_get(_obj, `${key}.${nextStep}`, context), _get(_obj, key, context), parentPath, nextStep, context)
-          }
-        }
-      } else if (Array.isArray(_obj)) {
-        for (const key of Object.keys(_obj)) {
-          if (__steps.length === 1) {
-            options.removeProp(_get(_obj, key, context), _obj, parentPath, 0, context)
-          } else {
-            options.removeProp(_get(_obj, `${key}.${nextStep}`, context), _get(_obj, key, context), parentPath, nextStep, context)
-          }
-          // always remove first one as array's size decreases
-        }
-        // switch to set??
-        // options.setProp(_obj, undefined, [])
-      }
-    } else if (parentPath.endsWith('*')) {
-      for (const key of Object.keys(parent)) {
-        options.removeProp(_get(parent, `${key}.${step}`, context), _get(parent, key, context), parentPath, step, context)
-      }
-    } else if (!failed && options.hasProp(parent, step)) {
-      return options.removeProp(obj, parent, parentPath, step, context)
-    } else {
-      return false
-    }
+    return _remove(obj, steps, context)
   }
 }
 

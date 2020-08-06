@@ -149,7 +149,7 @@ describe('remove(<obj>, <path>, <context?>)', () => {
     expect(obj['1'].comments[1].likedBy['1']).toEqual({ user: '1' })
   })
 
-  // /** Computed with variable keys */
+  /** Computed with variable keys */
 
   it('should remove in a 2-dimensions: object into keyed-object, computed + 1 variable key', () => {
     const obj = {
@@ -195,7 +195,7 @@ describe('remove(<obj>, <path>, <context?>)', () => {
     expect(obj['1'].comments[1]).toEqual({ id: 2 })
   })
 
-  // /** Computed with variable tuple keys */
+  /** Computed with variable tuple keys */
 
   it('should remove in a 3-dimensions: array into object into keyed-object, computed key + 4 variable keys stored in tuples', () => {
     const obj = {
@@ -249,76 +249,89 @@ describe('remove(<obj>, <path>, <context?>)', () => {
     expect(obj.products).toEqual([{}, {}])
   })
 
-  // it('should remove map value in nested array, spread operator', () => {
-  //   const obj = {
-  //     products: [
-  //       { name: 'Berries', details: [{ title: 'Something' }, { title: 'Else' }] },
-  //       { name: 'Marmelade', details: [{ title: 'Something' }, { title: 'Else' }] },
-  //     ],
-  //   }
-  //   remove(obj, 'products..details..title')
-  //   expect(obj.products).toEqual([
-  //     { name: 'Berries', details: [{}, {}] },
-  //     { name: 'Marmelade', details: [{}, {}] },
-  //   ])
-  // })
+  it('should remove map value in nested array, spread operator', () => {
+    const obj = {
+      products: [
+        { name: 'Berries', details: [{ title: 'Something' }, { title: 'Else' }] },
+        { name: 'Marmelade', details: [{ title: 'Something' }, { title: 'Else' }] },
+      ],
+    }
+    remove(obj, 'products..details..title')
+    expect(obj.products).toEqual([
+      { name: 'Berries', details: [{}, {}] },
+      { name: 'Marmelade', details: [{}, {}] },
+    ])
+  })
 
-  // it('should remove map value in nested array, star version of spread operator', () => {
-  //   const obj = {
-  //     products: [
-  //       { name: 'Berries', details: [{ title: 'Something' }, { title: 'Else' }] },
-  //       { name: 'Marmelade', details: [{ title: 'Something' }, { title: 'Else' }] },
-  //     ],
-  //   }
-  //   remove(obj, 'products.*.details.*.title')
-  //   expect(obj).toEqual(obj.products.map((p) => 'details' in p && p.details.map((d) => d.title)))
-  // })
+  it('should remove map value in nested array, star version of spread operator', () => {
+    const obj = {
+      products: [
+        { name: 'Berries', details: [{ title: 'Something' }, { title: 'Else' }] },
+        { name: 'Marmelade', details: [{ title: 'Something' }, { title: 'Else' }] },
+      ],
+    }
+    remove(obj, 'products.*.details.*.title')
+    expect(obj.products).toEqual([
+      { name: 'Berries', details: [{}, {}] },
+      { name: 'Marmelade', details: [{}, {}] },
+    ])
+  })
 
   /** Spread operator in Objects */
 
-  // it('should remove spread iterable, spread operator', () => {
-  //   const obj = { products: { '1': { name: 'Berries' }, '2': { name: 'Marmelade' } } }
-  //   remove(obj, 'products..')
-  //   expect(obj).toEqual(Object.values(obj.products))
-  // })
+  it('should remove spread iterable, spread operator', () => {
+    const obj = { products: { '1': { name: 'Berries' }, '2': { name: 'Marmelade' } } }
+    remove(obj, 'products..')
+    expect(obj.products).toEqual({})
+  })
 
-  // it('should remove spread iterable, star version of spread operator', () => {
-  //   const obj = { products: { '1': { name: 'Berries' }, '2': { name: 'Marmelade' } } }
-  //   remove(obj, 'products.*')
-  //   expect(obj).toEqual(Object.values(obj.products))
-  // })
+  it('should remove spread iterable, star version of spread operator', () => {
+    const obj = { products: { '1': { name: 'Berries' }, '2': { name: 'Marmelade' } } }
+    remove(obj, 'products.*')
+    expect(obj.products).toEqual({})
+  })
 
-  // it('should remove map value in array, spread operator', () => {
-  //   const obj = { products: { '1': { name: 'Berries' }, '2': { name: 'Marmelade' } } }
-  //   remove(obj, 'products..name')
-  //   expect(obj).toEqual(Object.values(obj.products).map((p) => p.name))
-  // })
+  it('should remove map value in array, spread operator', () => {
+    const obj = { products: { '1': { name: 'Berries' }, '2': { name: 'Marmelade' } } }
+    remove(obj, 'products..name')
+    expect(obj).toEqual({ products: { '1': {}, '2': {} } })
+  })
 
-  // it('should remove map value in array, star version of spread operator', () => {
-  //   const obj = { products: { '1': { name: 'Berries' }, '2': { name: 'Marmelade' } } }
-  //   remove(obj, 'products.*.name')
-  //   expect(obj).toEqual(Object.values(obj.products).map((p) => p.name))
-  // })
+  it('should remove map value in array, star version of spread operator', () => {
+    const obj = { products: { '1': { name: 'Berries' }, '2': { name: 'Marmelade' } } }
+    remove(obj, 'products.*.name')
+    expect(obj).toEqual({ products: { '1': {}, '2': {} } })
+  })
 
-  // it('should remove map value in nested array, spread operator', () => {
-  //   const obj = {
-  //     products: {
-  //       '1': { name: 'Berries', details: { '1': { title: 'Something' }, '2': { title: 'Else' } } },
-  //       '2': { name: 'Marmelade', details: { '1': { title: 'Something' }, '2': { title: 'Else' } } },
-  //     },
-  //   }
-  //   remove(obj, 'products..details..title')
-  //   expect(obj).toEqual(Object.values(obj.products).map((p) => 'details' in p && Object.values(p.details).map((d) => d.title)))
-  // })
+  it('should remove map value in nested array, spread operator', () => {
+    const obj = {
+      products: {
+        '1': { name: 'Berries', details: { '1': { title: 'Something' }, '2': { title: 'Else' } } },
+        '2': { name: 'Marmelade', details: { '1': { title: 'Something' }, '2': { title: 'Else' } } },
+      },
+    }
+    remove(obj, 'products..details..title')
+    expect(obj).toEqual({
+      products: {
+        '1': { name: 'Berries', details: { '1': {}, '2': {} } },
+        '2': { name: 'Marmelade', details: { '1': {}, '2': {} } },
+      },
+    })
+  })
 
-  // it('should remove map value in nested array, star version of spread operator', () => {
-  //   const obj = {
-  //     products: {
-  //       '1': { name: 'Berries', details: { '1': { title: 'Something' }, '2': { title: 'Else' } } },
-  //       '2': { name: 'Marmelade', details: { '1': { title: 'Something' }, '2': { title: 'Else' } } },
-  //     },
-  //   }
-  //   remove(obj, 'products.*.details.*.title')
-  //   expect(obj).toEqual(Object.values(obj.products).map((p) => 'details' in p && Object.values(p.details).map((d) => d.title)))
-  // })
+  it('should remove map value in nested array, star version of spread operator', () => {
+    const obj = {
+      products: {
+        '1': { name: 'Berries', details: { '1': { title: 'Something' }, '2': { title: 'Else' } } },
+        '2': { name: 'Marmelade', details: { '1': { title: 'Something' }, '2': { title: 'Else' } } },
+      },
+    }
+    remove(obj, 'products.*.details.*.title')
+    expect(obj).toEqual({
+      products: {
+        '1': { name: 'Berries', details: { '1': {}, '2': {} } },
+        '2': { name: 'Marmelade', details: { '1': {}, '2': {} } },
+      },
+    })
+  })
 })
