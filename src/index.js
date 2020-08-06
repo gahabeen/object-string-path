@@ -373,7 +373,7 @@ export function makeRemove(options) {
 
     function _remove(_obj, _steps, _context) {
       const { step, _steps: __steps, failed } = resolveStep(_steps, _obj, _context)
-      console.log({ step, __steps, failed })
+      // console.log({ step, __steps, failed })
 
       if (failed) {
         // stop
