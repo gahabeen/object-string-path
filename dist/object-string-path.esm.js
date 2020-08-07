@@ -1,5 +1,5 @@
 /*!
-  * object-string-path v0.1.41
+  * object-string-path v0.1.42
   * (c) 2020 Gabin Desserprit
   * @license MIT
   */
@@ -211,18 +211,32 @@ function setProp(obj, key, value) {
   }
 }
 
-function removeProp(parent, key, context) {
+function removeProp(target, key, context) {
   // console.log('removeProp', { parent, key })
-  if (Array.isArray(parent)) {
-    parent.splice(+key, 1);
+  if (Array.isArray(target)) {
+    target.splice(+key, 1);
     return true
-  } else if (isObject(parent)) {
-    delete parent[key];
+  } else if (isObject(target)) {
+    delete target[key];
     return true
   } else {
     // nothing can be done?
     // Handle more types
     return false
+  }
+}
+
+function pushProp(target, value, context) {
+  if (Array.isArray(target)) {
+    target.push(value);
+    return target.slice(-1)[0]
+  }
+}
+
+function unshiftProp(target, value, context) {
+  if (Array.isArray(target)) {
+    target.unshift(value);
+    return target[0]
   }
 }
 
@@ -420,7 +434,6 @@ function makeSet(options) {
 
 function makeRemove(options) {
   options = {
-    get: null,
     getProp,
     hasProp,
     removeProp,
@@ -431,7 +444,6 @@ function makeRemove(options) {
 
   return function (obj, path, context) {
     const steps = options.afterGetSteps(options.getSteps(path));
-    const _get = options.get || makeGet({ getProp: options.getProp, hasProp: options.hasProp, getSteps: options.getSteps });
 
     function _remove(_obj, _steps, _context) {
       const { step, _steps: __steps, failed } = resolveStep(_steps, _obj, _context);
@@ -444,19 +456,14 @@ function makeRemove(options) {
         if (isObject(_obj) || Array.isArray(_obj)) {
           return Object.keys(_obj).every((key) => {
             if (__steps.length > 0) {
-              return _remove(_get(_obj, key, _context), __steps, _context)
+              return _remove(options.getProp(_obj, key, _context), __steps, _context)
             } else {
               return options.removeProp(_obj, Array.isArray(_obj) ? 0 : key, _context)
             }
           })
         }
       } else if (__steps.length > 0) {
-        if (failed) {
-          // stop
-          return false
-        } else {
-          return _remove(options.getProp(_obj, step), __steps, _context)
-        }
+        return _remove(options.getProp(_obj, step), __steps, _context)
       } else if (options.hasProp(_obj, step)) {
         return options.removeProp(_obj, step, _context)
       } else {
@@ -468,9 +475,81 @@ function makeRemove(options) {
   }
 }
 
+function makePush(options) {
+  options = {
+    getProp,
+    hasProp,
+    pushProp,
+    getSteps: splitPath,
+    afterGetSteps: (steps) => steps,
+    ...(options || {}),
+  };
+
+  return function (obj, path, value, context) {
+    const steps = options.afterGetSteps(options.getSteps(path));
+
+    function _push(_obj, _steps, _value, _context) {
+      const { step, _steps: __steps, failed } = resolveStep(_steps, _obj, _context);
+
+      if (failed) {
+        // stop
+        return
+      } else if (__steps.length > 0) {
+        if (options.hasProp(_obj, step, _context)) {
+          return _push(options.getProp(_obj, step, _context), __steps, _value, _context)
+        } else {
+          // stop
+          return
+        }
+      } else {
+        return options.pushProp(options.getProp(_obj, step, _context), _value, _context)
+      }
+    }
+
+    return _push(obj, steps, value, context)
+  }
+}
+
+function makeUnshift(options) {
+  options = {
+    getProp,
+    hasProp,
+    unshiftProp,
+    getSteps: splitPath,
+    afterGetSteps: (steps) => steps,
+    ...(options || {}),
+  };
+
+  return function (obj, path, value, context) {
+    const steps = options.afterGetSteps(options.getSteps(path));
+
+    function _push(_obj, _steps, _value, _context) {
+      const { step, _steps: __steps, failed } = resolveStep(_steps, _obj, _context);
+
+      if (failed) {
+        // stop
+        return
+      } else if (__steps.length > 0) {
+        if (options.hasProp(_obj, step, _context)) {
+          return _push(options.getProp(_obj, step, _context), __steps, _value, _context)
+        } else {
+          // stop
+          return
+        }
+      } else {
+        return options.unshiftProp(options.getProp(_obj, step, _context), _value, _context)
+      }
+    }
+
+    return _push(obj, steps, value, context)
+  }
+}
+
 const has = makeHas();
 const get = makeGet();
 const set = makeSet();
 const remove = makeRemove();
+const push = makePush();
+const unshift = makeUnshift();
 
-export { ARRAY_VALUE_SEPARATOR, CLOSED_BRACKET_PLACEHOLDER, DOT_PLACEHOLDER, DOT_REGEX, OBJECT_KEY_PREFIX, OPEN_BRACKET_PLACEHOLDER, SPREAD_PLACEHOLDER, SPREAD_REGEX, VARIABLE_PATH, escape, get, getIndexByChildKeyValue, getProp, has, hasProp, isObject, isStringifiedArray, isValidKey, makeGet, makeHas, makeRemove, makeSet, remove, removeProp, resolveContext, resolveStep, resolveVariable, set, setProp, splitPath, stringifyArray, unescape };
+export { ARRAY_VALUE_SEPARATOR, CLOSED_BRACKET_PLACEHOLDER, DOT_PLACEHOLDER, DOT_REGEX, OBJECT_KEY_PREFIX, OPEN_BRACKET_PLACEHOLDER, SPREAD_PLACEHOLDER, SPREAD_REGEX, VARIABLE_PATH, escape, get, getIndexByChildKeyValue, getProp, has, hasProp, isObject, isStringifiedArray, isValidKey, makeGet, makeHas, makePush, makeRemove, makeSet, makeUnshift, push, pushProp, remove, removeProp, resolveContext, resolveStep, resolveVariable, set, setProp, splitPath, stringifyArray, unescape, unshift, unshiftProp };
