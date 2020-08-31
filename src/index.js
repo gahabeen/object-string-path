@@ -165,14 +165,14 @@ export function removeProp(target, key, context) {
 export function pushProp(target, value, context) {
   if (Array.isArray(target)) {
     target.push(value)
-    return target.slice(-1)[0]
+    return target
   }
 }
 
 export function unshiftProp(target, value, context) {
   if (Array.isArray(target)) {
     target.unshift(value)
-    return target[0]
+    return target
   }
 }
 
@@ -413,8 +413,9 @@ export function makeRemove(options) {
   }
 }
 
-export function makePush(options) {
+function makePush(options) {
   options = {
+    setProp,
     getProp,
     hasProp,
     pushProp,
@@ -436,11 +437,13 @@ export function makePush(options) {
         if (options.hasProp(_obj, step, _context)) {
           return _push(options.getProp(_obj, step, _context), __steps, _value, _context)
         } else {
-          // stop
+          // stop, can't set it!
           return
         }
       } else {
-        return options.pushProp(options.getProp(_obj, step, _context), _value, _context)
+        const array = options.getProp(_obj, step, _context)
+        const updatedArray = options.pushProp(array, _value, _context)
+        return options.setProp(_obj, step, updatedArray)
       }
     }
 
@@ -448,8 +451,9 @@ export function makePush(options) {
   }
 }
 
-export function makeUnshift(options) {
+function makeUnshift(options) {
   options = {
+    setProp,
     getProp,
     hasProp,
     unshiftProp,
@@ -475,7 +479,10 @@ export function makeUnshift(options) {
           return
         }
       } else {
-        return options.unshiftProp(options.getProp(_obj, step, _context), _value, _context)
+        const array = options.getProp(_obj, step, _context)
+        const updatedArray = options.unshiftProp(array, _value, _context)
+        return options.setProp(_obj, step, updatedArray)
+        // return options.unshiftProp(options.getProp(_obj, step, _context), _value, _context)
       }
     }
 
