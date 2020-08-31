@@ -1,5 +1,5 @@
 /*!
-  * object-string-path v0.1.43
+  * object-string-path v0.1.5
   * (c) 2020 Gabin Desserprit
   * @license MIT
   */
@@ -583,8 +583,10 @@ exports.isStringifiedArray = isStringifiedArray;
 exports.isValidKey = isValidKey;
 exports.makeGet = makeGet;
 exports.makeHas = makeHas;
+exports.makePush = makePush;
 exports.makeRemove = makeRemove;
 exports.makeSet = makeSet;
+exports.makeUnshift = makeUnshift;
 exports.push = push;
 exports.pushProp = pushProp;
 exports.remove = remove;

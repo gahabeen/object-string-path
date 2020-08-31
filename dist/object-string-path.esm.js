@@ -1,5 +1,5 @@
 /*!
-  * object-string-path v0.1.43
+  * object-string-path v0.1.5
   * (c) 2020 Gabin Desserprit
   * @license MIT
   */
@@ -559,4 +559,4 @@ const remove = makeRemove();
 const push = makePush();
 const unshift = makeUnshift();
 
-export { ARRAY_VALUE_SEPARATOR, CLOSED_BRACKET_PLACEHOLDER, DOT_PLACEHOLDER, DOT_REGEX, OBJECT_KEY_PREFIX, OPEN_BRACKET_PLACEHOLDER, SPREAD_PLACEHOLDER, SPREAD_REGEX, VARIABLE_PATH, escape, get, getIndexByChildKeyValue, getProp, has, hasProp, isObject, isStringifiedArray, isValidKey, makeGet, makeHas, makeRemove, makeSet, push, pushProp, remove, removeProp, resolveContext, resolveStep, resolveVariable, set, setProp, splitPath, stringifyArray, unescape, unshift, unshiftProp };
+export { ARRAY_VALUE_SEPARATOR, CLOSED_BRACKET_PLACEHOLDER, DOT_PLACEHOLDER, DOT_REGEX, OBJECT_KEY_PREFIX, OPEN_BRACKET_PLACEHOLDER, SPREAD_PLACEHOLDER, SPREAD_REGEX, VARIABLE_PATH, escape, get, getIndexByChildKeyValue, getProp, has, hasProp, isObject, isStringifiedArray, isValidKey, makeGet, makeHas, makePush, makeRemove, makeSet, makeUnshift, push, pushProp, remove, removeProp, resolveContext, resolveStep, resolveVariable, set, setProp, splitPath, stringifyArray, unescape, unshift, unshiftProp };
