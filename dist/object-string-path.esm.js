@@ -1,5 +1,5 @@
 /*!
-  * object-string-path v0.1.42
+  * object-string-path v0.1.43
   * (c) 2020 Gabin Desserprit
   * @license MIT
   */
@@ -229,14 +229,14 @@ function removeProp(target, key, context) {
 function pushProp(target, value, context) {
   if (Array.isArray(target)) {
     target.push(value);
-    return target.slice(-1)[0]
+    return target
   }
 }
 
 function unshiftProp(target, value, context) {
   if (Array.isArray(target)) {
     target.unshift(value);
-    return target[0]
+    return target
   }
 }
 
@@ -477,6 +477,7 @@ function makeRemove(options) {
 
 function makePush(options) {
   options = {
+    setProp,
     getProp,
     hasProp,
     pushProp,
@@ -498,11 +499,13 @@ function makePush(options) {
         if (options.hasProp(_obj, step, _context)) {
           return _push(options.getProp(_obj, step, _context), __steps, _value, _context)
         } else {
-          // stop
+          // stop, can't set it!
           return
         }
       } else {
-        return options.pushProp(options.getProp(_obj, step, _context), _value, _context)
+        const array = options.getProp(_obj, step, _context);
+        const updatedArray = options.pushProp(array, _value, _context);
+        return options.setProp(_obj, step, updatedArray)
       }
     }
 
@@ -512,6 +515,7 @@ function makePush(options) {
 
 function makeUnshift(options) {
   options = {
+    setProp,
     getProp,
     hasProp,
     unshiftProp,
@@ -537,7 +541,10 @@ function makeUnshift(options) {
           return
         }
       } else {
-        return options.unshiftProp(options.getProp(_obj, step, _context), _value, _context)
+        const array = options.getProp(_obj, step, _context);
+        const updatedArray = options.unshiftProp(array, _value, _context);
+        return options.setProp(_obj, step, updatedArray)
+        // return options.unshiftProp(options.getProp(_obj, step, _context), _value, _context)
       }
     }
 
@@ -552,4 +559,4 @@ const remove = makeRemove();
 const push = makePush();
 const unshift = makeUnshift();
 
-export { ARRAY_VALUE_SEPARATOR, CLOSED_BRACKET_PLACEHOLDER, DOT_PLACEHOLDER, DOT_REGEX, OBJECT_KEY_PREFIX, OPEN_BRACKET_PLACEHOLDER, SPREAD_PLACEHOLDER, SPREAD_REGEX, VARIABLE_PATH, escape, get, getIndexByChildKeyValue, getProp, has, hasProp, isObject, isStringifiedArray, isValidKey, makeGet, makeHas, makePush, makeRemove, makeSet, makeUnshift, push, pushProp, remove, removeProp, resolveContext, resolveStep, resolveVariable, set, setProp, splitPath, stringifyArray, unescape, unshift, unshiftProp };
+export { ARRAY_VALUE_SEPARATOR, CLOSED_BRACKET_PLACEHOLDER, DOT_PLACEHOLDER, DOT_REGEX, OBJECT_KEY_PREFIX, OPEN_BRACKET_PLACEHOLDER, SPREAD_PLACEHOLDER, SPREAD_REGEX, VARIABLE_PATH, escape, get, getIndexByChildKeyValue, getProp, has, hasProp, isObject, isStringifiedArray, isValidKey, makeGet, makeHas, makeRemove, makeSet, push, pushProp, remove, removeProp, resolveContext, resolveStep, resolveVariable, set, setProp, splitPath, stringifyArray, unescape, unshift, unshiftProp };

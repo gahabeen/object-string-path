@@ -1,5 +1,5 @@
 /*!
-  * object-string-path v0.1.42
+  * object-string-path v0.1.43
   * (c) 2020 Gabin Desserprit
   * @license MIT
   */
@@ -235,14 +235,14 @@
   function pushProp(target, value, context) {
     if (Array.isArray(target)) {
       target.push(value);
-      return target.slice(-1)[0]
+      return target
     }
   }
 
   function unshiftProp(target, value, context) {
     if (Array.isArray(target)) {
       target.unshift(value);
-      return target[0]
+      return target
     }
   }
 
@@ -483,6 +483,7 @@
 
   function makePush(options) {
     options = {
+      setProp,
       getProp,
       hasProp,
       pushProp,
@@ -504,11 +505,13 @@
           if (options.hasProp(_obj, step, _context)) {
             return _push(options.getProp(_obj, step, _context), __steps, _value, _context)
           } else {
-            // stop
+            // stop, can't set it!
             return
           }
         } else {
-          return options.pushProp(options.getProp(_obj, step, _context), _value, _context)
+          const array = options.getProp(_obj, step, _context);
+          const updatedArray = options.pushProp(array, _value, _context);
+          return options.setProp(_obj, step, updatedArray)
         }
       }
 
@@ -518,6 +521,7 @@
 
   function makeUnshift(options) {
     options = {
+      setProp,
       getProp,
       hasProp,
       unshiftProp,
@@ -543,7 +547,10 @@
             return
           }
         } else {
-          return options.unshiftProp(options.getProp(_obj, step, _context), _value, _context)
+          const array = options.getProp(_obj, step, _context);
+          const updatedArray = options.unshiftProp(array, _value, _context);
+          return options.setProp(_obj, step, updatedArray)
+          // return options.unshiftProp(options.getProp(_obj, step, _context), _value, _context)
         }
       }
 
@@ -578,10 +585,8 @@
   exports.isValidKey = isValidKey;
   exports.makeGet = makeGet;
   exports.makeHas = makeHas;
-  exports.makePush = makePush;
   exports.makeRemove = makeRemove;
   exports.makeSet = makeSet;
-  exports.makeUnshift = makeUnshift;
   exports.push = push;
   exports.pushProp = pushProp;
   exports.remove = remove;
