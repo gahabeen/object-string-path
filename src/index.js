@@ -413,7 +413,7 @@ export function makeRemove(options) {
   }
 }
 
-function makePush(options) {
+export function makePush(options) {
   options = {
     setProp,
     getProp,
@@ -451,7 +451,7 @@ function makePush(options) {
   }
 }
 
-function makeUnshift(options) {
+export function makeUnshift(options) {
   options = {
     setProp,
     getProp,
