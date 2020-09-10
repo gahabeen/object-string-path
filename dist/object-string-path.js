@@ -1,5 +1,5 @@
 /*!
-  * object-string-path v0.1.5
+  * object-string-path v0.1.51
   * (c) 2020 Gabin Desserprit
   * @license MIT
   */
@@ -230,14 +230,21 @@ function removeProp(target, key, context) {
   }
 }
 
-function pushProp(target, value, context) {
+function insertProp(target, index, value) {
+  if (Array.isArray(target)) {
+    target.splice(index, 0, value);
+    return target
+  }
+}
+
+function pushProp(target, value) {
   if (Array.isArray(target)) {
     target.push(value);
     return target
   }
 }
 
-function unshiftProp(target, value, context) {
+function unshiftProp(target, value) {
   if (Array.isArray(target)) {
     target.unshift(value);
     return target
@@ -481,7 +488,7 @@ function makeRemove(options) {
 
 function makePush(options) {
   options = {
-    setProp,
+    // setProp,
     getProp,
     hasProp,
     pushProp,
@@ -508,8 +515,9 @@ function makePush(options) {
         }
       } else {
         const array = options.getProp(_obj, step, _context);
-        const updatedArray = options.pushProp(array, _value, _context);
-        return options.setProp(_obj, step, updatedArray)
+        // const updatedArray = options.pushProp(array, _value, _context);
+        // return options.setProp(_obj, step, updatedArray)
+        return options.pushProp(array, _value, _context)
       }
     }
 
@@ -517,9 +525,45 @@ function makePush(options) {
   }
 }
 
+function makeInsert(options) {
+  options = {
+    getProp,
+    hasProp,
+    insertProp,
+    getSteps: splitPath,
+    afterGetSteps: (steps) => steps,
+    ...(options || {}),
+  };
+
+  return function (obj, path, value, context) {
+    const steps = options.afterGetSteps(options.getSteps(path));
+
+    function _insert(_obj, _steps, _value, _context) {
+      const { step, _steps: __steps, failed } = resolveStep(_steps, _obj, _context);
+
+      if (failed) {
+        // stop
+        return
+      } else if (__steps.length > 0) {
+        if (options.hasProp(_obj, step, _context)) {
+          return _insert(options.getProp(_obj, step, _context), __steps, _value, _context)
+        } else {
+          // stop, can't set it!
+          return
+        }
+      } else {
+        const index = +step;
+        return options.insertProp(_obj, index, _value, _context)
+      }
+    }
+
+    return _insert(obj, steps, value, context)
+  }
+}
+
 function makeUnshift(options) {
   options = {
-    setProp,
+    // setProp,
     getProp,
     hasProp,
     unshiftProp,
@@ -546,9 +590,9 @@ function makeUnshift(options) {
         }
       } else {
         const array = options.getProp(_obj, step, _context);
-        const updatedArray = options.unshiftProp(array, _value, _context);
-        return options.setProp(_obj, step, updatedArray)
-        // return options.unshiftProp(options.getProp(_obj, step, _context), _value, _context)
+        // const updatedArray = options.unshiftProp(array, _value, _context)
+        // return options.setProp(_obj, step, updatedArray)
+        return options.unshiftProp(array, _value, _context)
       }
     }
 
@@ -562,6 +606,7 @@ const set = makeSet();
 const remove = makeRemove();
 const push = makePush();
 const unshift = makeUnshift();
+const insert = makeInsert();
 
 exports.ARRAY_VALUE_SEPARATOR = ARRAY_VALUE_SEPARATOR;
 exports.CLOSED_BRACKET_PLACEHOLDER = CLOSED_BRACKET_PLACEHOLDER;
@@ -578,11 +623,14 @@ exports.getIndexByChildKeyValue = getIndexByChildKeyValue;
 exports.getProp = getProp;
 exports.has = has;
 exports.hasProp = hasProp;
+exports.insert = insert;
+exports.insertProp = insertProp;
 exports.isObject = isObject;
 exports.isStringifiedArray = isStringifiedArray;
 exports.isValidKey = isValidKey;
 exports.makeGet = makeGet;
 exports.makeHas = makeHas;
+exports.makeInsert = makeInsert;
 exports.makePush = makePush;
 exports.makeRemove = makeRemove;
 exports.makeSet = makeSet;
