@@ -162,14 +162,21 @@ export function removeProp(target, key, context) {
   }
 }
 
-export function pushProp(target, value, context) {
+export function insertProp(target, index, value) {
+  if (Array.isArray(target)) {
+    target.splice(index, 0, value)
+    return target
+  }
+}
+
+export function pushProp(target, value) {
   if (Array.isArray(target)) {
     target.push(value)
     return target
   }
 }
 
-export function unshiftProp(target, value, context) {
+export function unshiftProp(target, value) {
   if (Array.isArray(target)) {
     target.unshift(value)
     return target
@@ -415,7 +422,7 @@ export function makeRemove(options) {
 
 export function makePush(options) {
   options = {
-    setProp,
+    // setProp,
     getProp,
     hasProp,
     pushProp,
@@ -442,8 +449,9 @@ export function makePush(options) {
         }
       } else {
         const array = options.getProp(_obj, step, _context)
-        const updatedArray = options.pushProp(array, _value, _context)
-        return options.setProp(_obj, step, updatedArray)
+        // const updatedArray = options.pushProp(array, _value, _context);
+        // return options.setProp(_obj, step, updatedArray)
+        return options.pushProp(array, _value, _context)
       }
     }
 
@@ -451,9 +459,45 @@ export function makePush(options) {
   }
 }
 
+export function makeInsert(options) {
+  options = {
+    getProp,
+    hasProp,
+    insertProp,
+    getSteps: splitPath,
+    afterGetSteps: (steps) => steps,
+    ...(options || {}),
+  }
+
+  return function (obj, path, value, context) {
+    const steps = options.afterGetSteps(options.getSteps(path))
+
+    function _insert(_obj, _steps, _value, _context) {
+      const { step, _steps: __steps, failed } = resolveStep(_steps, _obj, _context)
+
+      if (failed) {
+        // stop
+        return
+      } else if (__steps.length > 0) {
+        if (options.hasProp(_obj, step, _context)) {
+          return _insert(options.getProp(_obj, step, _context), __steps, _value, _context)
+        } else {
+          // stop, can't set it!
+          return
+        }
+      } else {
+        const index = +step
+        return options.insertProp(_obj, index, _value, _context)
+      }
+    }
+
+    return _insert(obj, steps, value, context)
+  }
+}
+
 export function makeUnshift(options) {
   options = {
-    setProp,
+    // setProp,
     getProp,
     hasProp,
     unshiftProp,
@@ -480,9 +524,9 @@ export function makeUnshift(options) {
         }
       } else {
         const array = options.getProp(_obj, step, _context)
-        const updatedArray = options.unshiftProp(array, _value, _context)
-        return options.setProp(_obj, step, updatedArray)
-        // return options.unshiftProp(options.getProp(_obj, step, _context), _value, _context)
+        // const updatedArray = options.unshiftProp(array, _value, _context)
+        // return options.setProp(_obj, step, updatedArray)
+        return options.unshiftProp(array, _value, _context)
       }
     }
 
@@ -496,6 +540,7 @@ export const set = makeSet()
 export const remove = makeRemove()
 export const push = makePush()
 export const unshift = makeUnshift()
+export const insert = makeInsert()
 
 export * from './utils'
 export * from './consts'
