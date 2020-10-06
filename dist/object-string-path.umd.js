@@ -1,5 +1,5 @@
 /*!
-  * object-string-path v0.1.51
+  * object-string-path v0.2.0
   * (c) 2020 Gabin Desserprit
   * @license MIT
   */
@@ -279,9 +279,14 @@
               } else if (Array.isArray(_obj)) {
                 iterable = _obj;
               }
+
               if (Array.isArray(iterable)) {
                 if (__steps.length > 0) {
-                  return iterable.every((_subObj) => _has(_subObj, __steps))
+                  if (__steps[0].includes('=')) {
+                    return _has(iterable, __steps, _context)
+                  } else {
+                    return iterable.every((_subObj) => _has(_subObj, __steps))
+                  }
                 }
                 // if no following check, default to Boolean test
                 else {
@@ -342,7 +347,11 @@
               }
               if (Array.isArray(iterable)) {
                 if (__steps.length > 0) {
-                  return iterable.map((_subObj) => _get(_subObj, __steps))
+                  if (__steps[0].includes('=')) {
+                    return _get(iterable, __steps, _context)
+                  } else {
+                    return iterable.map((_subObj) => _get(_subObj, __steps, _context))
+                  }
                 } else {
                   return iterable
                 }
@@ -393,9 +402,13 @@
             if (isObject(_obj) || Array.isArray(_obj)) {
               // console.log({ step, __steps, _obj })
               if (__steps.length > 0) {
-                for (let key in _obj) {
-                  // console.log({ item: options.getProp(_obj, key), __steps, _value })
-                  _set(options.getProp(_obj, key), __steps, _value, _context);
+                if (__steps[0].includes('=')) {
+                  return _set(Object.values(_obj), __steps, _context)
+                } else {
+                  for (let key in _obj) {
+                    // console.log({ item: options.getProp(_obj, key), __steps, _value })
+                    _set(options.getProp(_obj, key), __steps, _value, _context);
+                  }
                 }
               } else {
                 for (let key in _obj) {
@@ -467,13 +480,21 @@
           return false
         } else if (step === '*') {
           if (isObject(_obj) || Array.isArray(_obj)) {
-            return Object.keys(_obj).every((key) => {
-              if (__steps.length > 0) {
-                return _remove(options.getProp(_obj, key, _context), __steps, _context)
+            if (__steps.length > 0) {
+              if (__steps[0].includes('=')) {
+                return _remove(Object.values(_obj), __steps, _context)
               } else {
-                return options.removeProp(_obj, Array.isArray(_obj) ? 0 : key, _context)
+                return Object.values(_obj).map((_subObj) => _remove(_subObj, __steps, _context))
               }
-            })
+            } else {
+              return Object.keys(_obj).every((key) => {
+                if (__steps.length > 0) {
+                  return _remove(options.getProp(_obj, key, _context), __steps, _context)
+                } else {
+                  return options.removeProp(_obj, Array.isArray(_obj) ? 0 : key, _context)
+                }
+              })
+            }
           }
         } else if (__steps.length > 0) {
           return _remove(options.getProp(_obj, step), __steps, _context)
