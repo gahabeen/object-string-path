@@ -196,10 +196,10 @@ export function makeHas(options) {
     const steps = options.afterGetSteps(options.getSteps(path))
     // console.log('path', path, steps)
 
-    function _has(_obj, _steps) {
+    function _has(_obj, _steps, _context) {
       // console.log("_has", _obj, _steps);
       if (_steps.length > 0) {
-        const { step, _steps: __steps, failed } = resolveStep(_steps, _obj, context)
+        const { step, _steps: __steps, failed } = resolveStep(_steps, _obj, _context)
         // console.log('step', step, '_steps', _steps, "failed", failed)
         if (!failed) {
           if (step === '*') {
@@ -215,7 +215,7 @@ export function makeHas(options) {
                 if (__steps[0].includes('=')) {
                   return _has(iterable, __steps, _context)
                 } else {
-                  return iterable.every((_subObj) => _has(_subObj, __steps))
+                  return iterable.every((_subObj) => _has(_subObj, __steps, _context))
                 }
               }
               // if no following check, default to Boolean test
@@ -230,7 +230,7 @@ export function makeHas(options) {
               // stop right now, no need to continue
               return false
             } else {
-              return _has(options.getProp(_obj, step), __steps)
+              return _has(options.getProp(_obj, step), __steps, _context)
             }
           }
         } else {
@@ -241,7 +241,7 @@ export function makeHas(options) {
       }
     }
 
-    return _has(obj, steps)
+    return _has(obj, steps, context)
   }
 }
 
