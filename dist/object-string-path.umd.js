@@ -1,5 +1,5 @@
 /*!
-  * object-string-path v0.2.0
+  * object-string-path v0.2.1
   * (c) 2020 Gabin Desserprit
   * @license MIT
   */
@@ -266,10 +266,10 @@
       const steps = options.afterGetSteps(options.getSteps(path));
       // console.log('path', path, steps)
 
-      function _has(_obj, _steps) {
+      function _has(_obj, _steps, _context) {
         // console.log("_has", _obj, _steps);
         if (_steps.length > 0) {
-          const { step, _steps: __steps, failed } = resolveStep(_steps, _obj, context);
+          const { step, _steps: __steps, failed } = resolveStep(_steps, _obj, _context);
           // console.log('step', step, '_steps', _steps, "failed", failed)
           if (!failed) {
             if (step === '*') {
@@ -285,7 +285,7 @@
                   if (__steps[0].includes('=')) {
                     return _has(iterable, __steps, _context)
                   } else {
-                    return iterable.every((_subObj) => _has(_subObj, __steps))
+                    return iterable.every((_subObj) => _has(_subObj, __steps, _context))
                   }
                 }
                 // if no following check, default to Boolean test
@@ -300,7 +300,7 @@
                 // stop right now, no need to continue
                 return false
               } else {
-                return _has(options.getProp(_obj, step), __steps)
+                return _has(options.getProp(_obj, step), __steps, _context)
               }
             }
           } else {
@@ -311,7 +311,7 @@
         }
       }
 
-      return _has(obj, steps)
+      return _has(obj, steps, context)
     }
   }
 
